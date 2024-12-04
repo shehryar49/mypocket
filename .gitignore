@@ -6,3 +6,4 @@ backend/bin/*
 backend/lib64
 backend/lib64/*
 backend/*.cfg
+backend/__pycache__
