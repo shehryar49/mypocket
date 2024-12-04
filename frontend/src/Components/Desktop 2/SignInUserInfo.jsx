@@ -1,79 +1,78 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import validator from "validator";
 import UserInfoLayout from "./SignInUserInfoLayout";
 import { AuthContext } from "../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import axios from "axios";
 
-const UserInfo = () => {
+const SignIn = () => {
   const [email, setEmail] = useState("");
-  const [isValid, setIsValid] = useState(false);
   const [password, setPassword] = useState("");
+  const [isValid, setIsValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage,setErrorMessage] = useState("");
-  const {login} = useContext(AuthContext);
+  const [errorMessage, setErrorMessage] = useState("");
+  const { login, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Dummy user
-  const dummyUser={
-    name:'John Doe',
-    email:'example@xyz.com',
-    image:'/assets/dummy-user.png',
-    password:'password123456'
-  };
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
-const handleSignIn =()=>{
-  if(email=== dummyUser.email && password === dummyUser.password){
-    login(dummyUser);
-    navigate('/dashboard');
-    toast.success("You’re now signed in.");
-  }else{
-    setErrorMessage("Invalid Email or password please try again")
-  }
-}
-  /**
-   * The function `handleEmail` updates the email state and checks if the input email is valid using a
-   * validator function.
-   */
-  const handleEmail = (e) => {
+  const handleSignIn = async () => {
+    if (!isValid) {
+      setErrorMessage("Please enter a valid email.");
+      return;
+    }
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/login", {
+        email,
+        password,
+      });
+      const { access_token } = response.data; // Get only the access token
+  
+      // Store the token and authenticate the user
+      login(access_token); 
+  
+      navigate("/dashboard");
+    } catch (error) {
+      setErrorMessage("Invalid Email or password, please try again.");
+    }
+  };
+  
+  
+
+  const handleEmailChange = (e) => {
     const inputEmail = e.target.value;
     setEmail(inputEmail);
-
     setIsValid(validator.isEmail(inputEmail));
-    setErrorMessage('');
+    setErrorMessage("");
   };
 
-  /**
-   * The function `handlePassword` updates the password state based on the input value.
-   */
-  const handlePassword = (e) => {
-    const inputPassword = e.target.value;
-    setPassword(inputPassword);
-    setErrorMessage('');
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    setErrorMessage("");
   };
 
-  /**
-   * The function `showVisibility` toggles the visibility of a password input field.
-   */
-  const showVisibility = () => {
-    setShowPassword(!showPassword);
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
   };
 
   return (
-    <div>
-      <UserInfoLayout
-        handleEmail={handleEmail}
-        handlePassword={handlePassword}
-        showPassword={showPassword}
-        isValid={isValid}
-        showVisibility={showVisibility}
-        email={email}
-        password={password}
-        handleSignIn={handleSignIn}
-        errorMessage={errorMessage}
-      />
-    </div>
+    <UserInfoLayout
+      handleEmail={handleEmailChange}
+      handlePassword={handlePasswordChange}
+      showPassword={showPassword}
+      isValid={isValid}
+      showVisibility={togglePasswordVisibility}
+      email={email}
+      password={password}
+      handleSignIn={handleSignIn}
+      errorMessage={errorMessage}
+    />
   );
 };
 
-export default UserInfo;
+export default SignIn;

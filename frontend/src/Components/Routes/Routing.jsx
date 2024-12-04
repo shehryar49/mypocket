@@ -17,87 +17,21 @@ import ErrorPage from "./ErrorPage";
 
 const Routing = () => {
   return (
-    <div>
-      <Routes>
-        <Route path="*" element={<ErrorPage />} />
-        <Route path="/" element={<LetsGetStarted />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/forgotpassword" element={<ForgotPassword />} />
-        {/* Dashboard */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        {/* My Profile */}
-        <Route
-          path="/dashboard/myprofile"
-          element={
-            <ProtectedRoute>
-              <MyProfile />
-            </ProtectedRoute>
-          }
-        />
-        {/* My Storage */}
-        <Route
-          path="/dashboard/mystorage"
-          element={
-            <ProtectedRoute>
-              <MyStorage />
-            </ProtectedRoute>
-          }
-        />
-        {/* My Files */}
-        <Route
-          path="/dashboard/myfiles"
-          element={
-            <ProtectedRoute>
-              <MyFiles />
-            </ProtectedRoute>
-          }
-        />
-        {/* My Passwords */}
-        <Route
-          path="/dashboard/mypasswords"
-          element={
-            <ProtectedRoute>
-              <MyPasswords />
-            </ProtectedRoute>
-          }
-        />
-        {/* Shared Files */}
-        <Route
-          path="/dashboard/sharedfiles"
-          element={
-            <ProtectedRoute>
-              <SharedFiles />
-            </ProtectedRoute>
-          }
-        />
-        {/* Settings */}
-        <Route
-          path="/dashboard/settings"
-          element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          }
-        />
-        {/* Upload */}
-        <Route
-          path="/dashboard/upload"
-          element={
-            <ProtectedRoute>
-              <Upload />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="*" element={<ErrorPage />} />
+      <Route path="/" element={<LetsGetStarted />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgotpassword" element={<ForgotPassword />} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard/myprofile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
+      <Route path="/dashboard/mystorage" element={<ProtectedRoute><MyStorage /></ProtectedRoute>} />
+      <Route path="/dashboard/myfiles" element={<ProtectedRoute><MyFiles /></ProtectedRoute>} />
+      <Route path="/dashboard/mypasswords" element={<ProtectedRoute><MyPasswords /></ProtectedRoute>} />
+      <Route path="/dashboard/sharedfiles" element={<ProtectedRoute><SharedFiles /></ProtectedRoute>} />
+      <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/dashboard/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+    </Routes>
   );
 };
 

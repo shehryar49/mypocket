@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+// The AuthContext to manage authentication and user data
 export const AuthContext = createContext();
+
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
     name: "",
@@ -12,124 +14,96 @@ const AuthProvider = ({ children }) => {
     dateOfBirth: "",
   });
   const [loginTime, setLoginTime] = useState(null);
-  const [ipAddress, setIpAddress] = useState("192.168.1.1");
-  const [loginDevice, setLoginDevice] = useState("Desktop");
+  const [ipAddress, setIpAddress] = useState("");
+  const [loginDevice, setLoginDevice] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
-  const [emailNotifications, setEmailNotifications] = useState(() => {
-    const savedMode = localStorage.getItem("emailNotifications");
-    return savedMode === "true";
-  });
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedMode = localStorage.getItem("darkMode");
-    return savedMode === "true";
-  });
 
-  const [twoFactor, setTwoFactor] = useState(() => {
-    const saveMode = localStorage.getItem("2FA");
-    return saveMode === "true";
-  });
-
-  /* The `useEffect` hook in the provided code snippet is responsible for updating the local storage
-  whenever the `emailNotifications` state variable changes. */
-  useEffect(() => {
-    localStorage.setItem("emailNotifications", emailNotifications);
-  }, [emailNotifications]);
-
-  /* The `useEffect` hook in the provided code snippet is responsible for updating the local storage
-  and toggling a CSS class on the body element based on the `isDarkMode` state variable. */
-  useEffect(() => {
-    localStorage.setItem("darkMode", isDarkMode);
-    document.body.classList.toggle("dark", isDarkMode);
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    localStorage.setItem("2FA", twoFactor);
-  }, [twoFactor]);
-
-  /**
-   * The login function sets user data and authenticates the user.
-   */
-  const login = (userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-
-    const options = { hour: "2-digit", minute: "2-digit", hour12: false };
-    const currentTime = new Date().toLocaleTimeString([], options);
-    setLoginTime(currentTime);
-
-    const newSession = {
-      user: userData,
-      loginTime: currentTime,
-      ipAddress: "ipAddress",
-      loginDevice: "Desktop",
-    };
-    setActiveSessions((prevSessions) => [...prevSessions, newSession]);
+  // Logout function to clear state and localStorage
+  const logout = async () => {
+    try {
+      localStorage.removeItem("user");
+      setIsAuthenticated(false);
+      setUser({});
+      setActiveSessions([]);
+      setLoginTime(null);
+      setIpAddress("");
+      setLoginDevice("");
+      toast.success("Logged out successfully.");
+    } catch (error) {
+      toast.error("Logout failed. Please try again.");
+    }
   };
 
-  /**
-   * The `logout` function resets user data and sets authentication status to false.
-   */
-  const logout = () => {
-    setUser({
-      name: "",
-      email: "",
-      image: "",
-      extraEmails: [],
-      contact: "",
-      dateOfBirth: "",
-    });
-    setIsAuthenticated(false);
-    setLoginTime(null);
-    setLoginDevice("Desktop");
-    setIpAddress("192.168.1.1");
-    setActiveSessions([]);
-    toast.success("You have successfully logged out.");
+  const login = async (token) => {
+    try {
+      localStorage.setItem("token", token);
+      setIsAuthenticated(true);
+  
+      toast.success("You’re now signed in.");
+    } catch (error) {
+      toast.error("Login failed. Please try again.");
+    }
+  };
+  
+
+  // Sign-up function with API call to FastAPI server
+  const signup = async (newUser) => {
+    try {
+      // API call to FastAPI to create a new user
+      const response = await fetch("http://localhost:8000/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,  // Assuming password is included in the newUser object
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Successfully created the user
+        setUser(newUser);  // Store the new user data
+        setIsAuthenticated(true);
+        localStorage.setItem("user", JSON.stringify(newUser)); // Persist user data
+        toast.success("Account created successfully!");
+      } else {
+        // Handle server-side errors (e.g., email already exists)
+        toast.error(data.detail || "Sign-up failed. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Sign-up failed. Please try again.");
+    }
   };
 
-  const deleteAccount = () => {
-    setUser({
-      name: "",
-      email: "",
-      image: "",
-      extraEmails: [],
-      contact: "",
-      dateOfBirth: "",
-    });
-    setIsAuthenticated(false);
-    setLoginTime(null);
-    setLoginDevice("");
-    setIpAddress("");
-    setActiveSessions([]);
-    localStorage.removeItem("darkMode");
-    localStorage.removeItem("2FA");
-    localStorage.removeItem("emailNotifications");
-  };
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setIsAuthenticated(true);
+      setLoginTime(parsedUser.loginTime);
+      setIpAddress("192.168.1.2");
+      setLoginDevice("Mobile");
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        loginTime,
+        ipAddress,
+        loginDevice,
+        activeSessions,
         isAuthenticated,
-        setIsAuthenticated,
         login,
         logout,
-        emailNotifications,
-        setEmailNotifications,
-        isDarkMode,
-        setIsDarkMode,
-        twoFactor,
-        setTwoFactor,
-        loginTime,
-        setLoginTime,
-        loginDevice,
-        setLoginDevice,
-        ipAddress,
-        setIpAddress,
-        activeSessions,
-        setActiveSessions,
-        deleteAccount,
+        signup,  // Expose signUp to the context
       }}
     >
       {children}
@@ -137,4 +111,5 @@ const AuthProvider = ({ children }) => {
   );
 };
 
+export const useAuth = () => useContext(AuthContext);
 export default AuthProvider;

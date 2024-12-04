@@ -15,7 +15,7 @@ const UserInfoLayout = ({
   password,
   isValid,
   showPassword,
-  handleSignIn,
+  handleSignIn, // This prop is passed down from SignInUserInfo.jsx
   errorMessage,
 }) => {
   return (
@@ -67,7 +67,6 @@ const UserInfoLayout = ({
         </Link>
 
         {/* Login Buttons */}
-
         <div className="flex flex-col gap-0 mb-20">
           {/* Sign in button */}
           <div onClick={handleSignIn}>

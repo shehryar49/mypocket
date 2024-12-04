@@ -1,5 +1,4 @@
 import React, { useContext, useState } from "react";
-
 import { AuthContext } from "../Context/AuthContext";
 import validator from "validator";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +16,7 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isValid, setIsValid] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login, signup } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleEmail = (e) => {
@@ -49,8 +48,12 @@ const SignUp = () => {
 
     if (inputPassword.length < 8) {
       setPasswordError("Password must be at least 8 characters long.");
+    } else if (!/[A-Z]/.test(inputPassword)) {
+      setPasswordError("Password must contain at least one uppercase letter.");
     } else if (!/\d/.test(inputPassword)) {
       setPasswordError("Password must contain at least one numeric digit.");
+    } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(inputPassword)) {
+      setPasswordError("Password must contain at least one special character.");
     } else {
       setPasswordError("");
     }
@@ -59,14 +62,6 @@ const SignUp = () => {
   const showVisibility = () => {
     setShowPassword(!showPassword);
   };
-
-  const dummyUsers = [
-    {
-      name: "John Doe",
-      email: "emailxyz@gmail.com",
-      password: "password123456",
-    },
-  ];
 
   const handleSignUp = () => {
     if (!isChecked) {
@@ -91,42 +86,41 @@ const SignUp = () => {
       return;
     }
 
-    // Checking if user already exists
-    const existingUser = dummyUsers.find((user) => user.email === email);
-    if (existingUser) {
-      setEmailError("User already exists with this email.");
-      return;
-    }
-
-    // Adding new user
+    // Call the server-side signup API (instead of dummy users)
     const newUser = { name, email, password };
-    dummyUsers.push(newUser);
-    login(newUser);
+    // Example API call
+    // fetch('/signup', { method: 'POST', body: JSON.stringify(newUser) })
+    signup(newUser);
+    login(newUser);  // Mock login to simulate success
     navigate("/dashboard");
-    toast.success("Your account has been successfully created. Welcome to My Pocket.")
+    toast.success("Your account has been successfully created. Welcome to My Pocket!");
+
+    // Reset form after success
+    setName("");
+    setEmail("");
+    setPassword("");
+    setIsChecked(false);
   };
 
   return (
-    <div>
-      <SignUpLayout
-        name={name}
-        email={email}
-        password={password}
-        handleEmail={handleEmail}
-        handleName={handleName}
-        handlePassword={handlePassword}
-        showVisibility={showVisibility}
-        showPassword={showPassword}
-        isChecked={isChecked}
-        isValid={isValid}
-        nameError={nameError}
-        emailError={emailError}
-        passwordError={passwordError}
-        checkboxError={checkboxError}
-        setIsChecked={setIsChecked}
-        handleSignUp={handleSignUp}
-      />
-    </div>
+    <SignUpLayout
+      name={name}
+      email={email}
+      password={password}
+      handleEmail={handleEmail}
+      handleName={handleName}
+      handlePassword={handlePassword}
+      showVisibility={showVisibility}
+      showPassword={showPassword}
+      isChecked={isChecked}
+      isValid={isValid}
+      nameError={nameError}
+      emailError={emailError}
+      passwordError={passwordError}
+      checkboxError={checkboxError}
+      setIsChecked={setIsChecked}
+      handleSignUp={handleSignUp}
+    />
   );
 };
 
