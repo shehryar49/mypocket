@@ -38,9 +38,7 @@ def get_current_user(authorization: HTTPAuthorizationCredentials = Depends(secur
         return None
 # Routes
 @app.post("/signup")
-async def createUser(req: User,logged_in = Depends(get_current_user)):
-    if logged_in:
-        return JSONResponse({'msg': 'You are already logged in. See homepage'},status_code=500)
+async def createUser(req: User):
     query = f"INSERT into users(name,email,password) VALUES('{req.name}','{req.email}','{req.password}')"
     cur.execute(f"select * from users where email='{req.email}'")
     records = cur.fetchall()
