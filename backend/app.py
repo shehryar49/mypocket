@@ -102,7 +102,7 @@ async def rename_folder(old: str,new: str):
     os.system(f"mv ~/mp-uploads/{old} ~/mp-uploads/{new}")
     return JSONResponse({'msg': 'Folder renamed'},200)
 
-@app.post("/deletefolder"):
+@app.post("/deletefolder")
 async def delete_folder(foldername: str):
     os.system(f'rmdir ~/mp-uploads/{foldername}')
     return JSONResponse({'msg': 'Folder removed'},200)
