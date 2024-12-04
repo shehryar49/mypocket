@@ -76,7 +76,7 @@ async def home(user:dict = Depends(get_current_user)):
 async def upload(file: UploadFile,user = Depends(get_current_user)):
     if not user:
         return JSONResponse({'msg': 'Login first'},401)
-    f = open("/home/thegentleman/mp-uploads/"+file.filename,"wb")
+    f = open("uploads/"+file.filename,"wb")
     total = file.size
     read = 0
     #print(await file.read(10))
@@ -88,21 +88,21 @@ async def upload(file: UploadFile,user = Depends(get_current_user)):
     return {'msg': file.filename}
 @app.get("/file")
 async def getfile(filename: str):
-    return FileResponse('/home/thegentleman/mp-uploads/'+filename)
+    return FileResponse('uploads/'+filename)
 
 @app.post("/createfolder")
 async def create_folder(foldername: str):
     #print(foldername)
-    ret = os.system(f"mkdir ~/mp-uploads/{foldername}")
+    ret = os.system(f"mkdir uploads/{foldername}")
     #if ret == 0:
     #    return JSONResponse({'msg': 'An error occurred'},500)
     return JSONResponse({'msg': 'All is well'},200)
 @app.post("/renamefolder")
 async def rename_folder(old: str,new: str):
-    os.system(f"mv ~/mp-uploads/{old} ~/mp-uploads/{new}")
+    os.system(f"mv uploads/{old} uploads/{new}")
     return JSONResponse({'msg': 'Folder renamed'},200)
 
 @app.post("/deletefolder")
 async def delete_folder(foldername: str):
-    os.system(f'rmdir ~/mp-uploads/{foldername}')
+    os.system(f'rmdir uploads/{foldername}')
     return JSONResponse({'msg': 'Folder removed'},200)
