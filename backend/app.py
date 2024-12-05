@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException,UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -15,7 +15,7 @@ app = FastAPI()
 # CORS Middleware Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React app running on localhost
+    allow_origins=["http://localhost:4173"],  # React app running on localhost
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,7 +34,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # Database connection setup
 def get_db_connection():
     conn = psycopg.connect(
-        dbname="mypocket", user="postgres", password=os.getenv("DB_PASSWORD", "suhaib"), host="localhost", port="5432"
+        dbname="mypocket", user="postgres", password="", host="localhost", port="5432"
     )
     return conn
 
