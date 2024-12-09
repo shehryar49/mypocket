@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 
 const MyPasswords = () => {
-  const api_url = "http://localhost:8000";
+  const API_URL = "http://127.0.0.1:8000";
   const [savedPasswords, setSavedPasswords] = useState([
     // DummyData
     {
@@ -53,27 +53,36 @@ const MyPasswords = () => {
       maskedPassword: "*********",
     },
   ]);
+  11
   useEffect(() => {
-    const response = axios.get('http://localhost:8000/passwords');
-    const json = response.data;
-    console.log(json);
-    //setSavedPasswords(json.data);//[{serialNumber: 1,date: "08/12/2024",note: "Suhaib is gay",email: "suhaib@gaymail.com",password: "gay",maskedPassword: "***"}]);
-  });
+    const token = localStorage.getItem("token");
+    const headers  = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get('http://localhost:8000/passwords',headers).then((res) => {
+      const json = res.data;
+      console.log(json);
+      setSavedPasswords(json.data);
+    });
+  },[]);
   const [filteredSearch, setFilteredSearch] = useState(savedPasswords);
   /**
    * The handleRemove function filters out a saved password based on its serial number and updates the
    * serial numbers of the remaining passwords.
    */
   const handleRemove = (savedPasswordTodelete) => {
+    console.log(savedPasswordTodelete);
+    const token = localStorage.getItem("token");
+    const headers  = {headers: {Authorization: `Bearer ${token}`}};    
+    axios.delete(API_URL + "/passwords?id="+savedPasswordTodelete,headers).then( () => {
     const filteredPassword = savedPasswords.filter(
-      (password) => password.serialNumber !== savedPasswordTodelete
-    );
-    const updatedPassword = filteredPassword.map((password, index) => ({
+        (password) => password.serialNumber !== savedPasswordTodelete
+      );
+      const updatedPassword = filteredPassword.map((password, index) => ({
       ...password,
       serialNumber: index + 1,
-    }));
-    setSavedPasswords(updatedPassword);
-    toast.success("Your password has been removed successfully.");
+      }));
+      setSavedPasswords(updatedPassword);
+      toast.success("Your password has been removed successfully.");
+    });
   };
   return (
     <>

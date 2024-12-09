@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { AuthContext } from "../Context/AuthContext";
 
 const TotalStorageProgressBar = ({ handleTotalStoragePercent }) => {
-  const { isDarkMode } = useContext(AuthContext);
+const { isDarkMode } = useContext(AuthContext);
 
   return (
     <div>

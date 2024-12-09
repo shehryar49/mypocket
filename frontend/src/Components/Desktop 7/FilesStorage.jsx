@@ -113,16 +113,14 @@ different colored progress bars based on the type of file and its size. */
                     <h1 className="text-xs font-normal text-gray-500 dark:text-gray-400">
                       {file.count} items ∙
                     </h1>
-                    <h1 className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                      {file.size} GB
-                    </h1>
+                    
                   </div>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              <div className="flex items-center w-32 ml-2 xl:mr-24 lg:mr-16">
-                {renderProgressBarColors(file.type, file.size)}
+              <div className="flex items-center w-32 ml-2 xl:mr-24 lg:mr-16"> 
+              {renderProgressBarColors(file.type, file.size)} 
               </div>
             </div>
           ))}

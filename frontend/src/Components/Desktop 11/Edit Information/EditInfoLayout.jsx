@@ -6,7 +6,7 @@ import {
 } from "react-icons/md";
 import DarkModeToggle from "../Toggle Buttons/DarkModeToggle";
 import EmailNotifiToggle from "../Toggle Buttons/EmailNotifiToggle";
-
+const API_URL = "http://localhost:8000";
 const EditInfoLayout = ({
   user,
   formattedBirth,
@@ -16,6 +16,7 @@ const EditInfoLayout = ({
   handleSaveChanges,
   handleAddImage,
 }) => {
+  console.log(user);
   return (
     <div>
       <div className="mx-6 mt-6 mb-6">
@@ -57,7 +58,7 @@ const EditInfoLayout = ({
         {/* Profile Picture */}
         <div className="flex items-center justify-center md:justify-normal flex-col md:flex-row gap-4 mt-10">
           <img
-            src={user.image}
+            src={API_URL+`/profile_pic?id=${user.id}`}
             alt=""
             className="md:w-20 md:h-20 w-10 h-10 rounded-full"
           />

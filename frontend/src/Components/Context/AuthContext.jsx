@@ -7,7 +7,8 @@ export const AuthContext = createContext();
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
     name: "",
-    email: ""
+    email: "",
+    id: 0
   });
   const [loginTime, setLoginTime] = useState(null);
   const [ipAddress, setIpAddress] = useState("");
@@ -36,6 +37,7 @@ const AuthProvider = ({ children }) => {
       localStorage.setItem("token", token);
       setIsAuthenticated(true);
       setUser(user);
+      console.log(user);
       toast.success("You’re now signed in.");
     } catch (error) {
       toast.error("Login failed. Please try again.");

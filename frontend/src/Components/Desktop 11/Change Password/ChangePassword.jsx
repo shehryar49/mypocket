@@ -3,6 +3,8 @@ import ChangePasswordLayout from "./ChangePasswordLayout";
 import { AuthContext } from "../../Context/AuthContext";
 import { toast } from "sonner";
 
+const API_URL = "http://localhost:8000";
+
 const ChangePassword = () => {
   const { user, setUser } = useContext(AuthContext);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -91,17 +93,13 @@ const ChangePassword = () => {
    */
   const handleChangePassword = () => {
     let isValid = true;
-
     // Current password validation
     if (currentPassword.length === 0) {
       setCurrentPasswordMsg("Current password cannot be empty.");
       setCurrentPasswordValid(false);
       isValid = false;
-    } else if (currentPassword !== user.password) {
-      setCurrentPasswordMsg("The current password is incorrect.");
-      setCurrentPasswordValid(false);
-      isValid = false;
-    } else {
+    }
+    else {
       setCurrentPasswordMsg("");
       setCurrentPasswordValid(true);
     }
@@ -127,16 +125,22 @@ const ChangePassword = () => {
     }
 
     if (isValid && newPasswordValid && confirmPasswordValid) {
-      setUser({ ...user, password: newPassword });
+      //setUser({ ...user, password: newPassword });
+      console.log('making password change request');
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-
-      toast.success("Password changed successfully!");
-
-      setNewPasswordValid(false);
-      setConfirmPasswordValid(false);
-      setFormSubmitted(false);
+      const token = localStorage.getItem("token");
+      const creds = {email : user["email"],password: newPassword};
+      const config = {headers: {Authorization: `Bearer ${token}`,'Content-type': 'application/json'},method: 'POST',body: JSON.stringify(creds)};
+      fetch(API_URL+"/changepassword",config).then(() => {    
+        toast.success("Password changed successfully!");
+        setNewPasswordValid(false);
+        setConfirmPasswordValid(false);
+        setFormSubmitted(false);
+      }).catch( () => {
+        toast.error("There was an error changing the password.");
+      });
     } else {
       setFormSubmitted(true);
     }

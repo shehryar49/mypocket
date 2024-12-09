@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import SaveYourPasswordsLayout from "./SaveYourPasswordsLayout";
 import validator from "validator";
+import axios from 'axios';
 import { toast } from "sonner";
 
 const SaveYourPasswords = ({ setSavedPasswords }) => {
@@ -14,7 +15,7 @@ const SaveYourPasswords = ({ setSavedPasswords }) => {
   const [passwordMsg, setPasswordMsg] = useState("");
   const [fullEmail, setFullEmail] = useState(true);
   const [fullPassword, setFullPassword] = useState(true);
-
+  const API_URL = "http://127.0.0.1:8000";
   useEffect(() => {
     handleValidPassword();
   }, [password]);
@@ -85,22 +86,29 @@ const SaveYourPasswords = ({ setSavedPasswords }) => {
             day: "2-digit",
           })
         : currentDate;
-      setSavedPasswords((prevPasswords) => [
-        ...prevPasswords,
-        {
-          serialNumber: prevPasswords.length + 1,
-          date: formattedDate,
-          note: note,
-          email: email,
-          password: password,
-          maskedPassword: "*".repeat(password.length),
-        },
-      ]);
-      toast.success("Your password has been saved successfully.");
-      setEmail("");
-      setDate("");
-      setPassword("");
-      setNote("");
+      
+    const token = localStorage.getItem("token");
+    const config  = {headers: {Authorization: `Bearer ${token}`,'Content-type': 'application/json'},method: "POST",body: JSON.stringify(
+                      {email: email,password: password,note: note})};
+      
+      fetch(API_URL+"/passwords",config).then((response) => {
+        setSavedPasswords((prevPasswords) => [
+          ...prevPasswords,
+          {
+            serialNumber: prevPasswords.length + 1,
+            date: formattedDate,
+            note: note,
+            email: email,
+            password: password,
+            maskedPassword: "*".repeat(password.length),
+          },
+        ]);    
+        toast.success("Your password has been saved successfully.");
+        setEmail("");
+        setDate("");
+        setPassword("");
+        setNote("");
+      });
     }
   };
 

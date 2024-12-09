@@ -5,12 +5,13 @@ import CircularProgressBar from "./CircularProgressBar";
 import FilesStorage from "./FilesStorage";
 import RecentFiles from "./RecentFiles";
 import TotalStorageProgressBar from "./TotalStorageProgressBar";
+import axios from 'axios';
 
 const MyStorage = () => {
   const [storageData, setStorageData] = useState({});
   const [storagePercent, setStoragePercent] = useState(0);
   const [cloudStoragePercent, setCloudStoragePercent] = useState(0);
-
+  const API_URL = "http://localhost:8000";
   // DummyData
   const dummyData = {
     totalStorage: 256, //256GB
@@ -27,7 +28,20 @@ const MyStorage = () => {
     ],
   };
   useEffect(() => {
-    setStorageData(dummyData);
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/storage_info",config).then((response) => {
+      const json = response.data;
+      dummyData['filesStorage'][0]['count'] = json['passwords'];
+      dummyData['filesStorage'][1]['count'] = json['videos'].length;
+      dummyData['filesStorage'][4]['count'] = json['audios'].length;
+      dummyData['filesStorage'][3]['count'] = json['images'].length;
+      dummyData['filesStorage'][2]['count'] = json['documents'].length;
+      dummyData.usedStorage = (((json['total_storage']/1024)/1024)/1024).toFixed(4);
+      dummyData.availableStorage = dummyData.totalStorage - dummyData.usedStorage;
+      setStorageData(dummyData);
+      
+    });
   }, []);
 
   useEffect(() => {

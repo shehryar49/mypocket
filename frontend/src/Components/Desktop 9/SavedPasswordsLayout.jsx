@@ -19,7 +19,7 @@ const SavedPasswordsLayout = ({ savedPasswords, handleRemove }) => {
           {/* Header Row */}
           <div className="flex justify-between min-w-[600px] md:min-w-0 md:flex-wrap font-normal text-zinc-500 lg:text-sm">
             <span className="w-1/12 lg:text-sm text-xs text-left bg-zinc-100 dark:bg-gray-600 dark:text-gray-300 p-2">
-              Sr.No
+              ID
             </span>
             <span className="w-1/5 lg:text-sm text-xs text-left bg-zinc-100 dark:bg-gray-600 dark:text-gray-300 p-2">
               Date
@@ -72,7 +72,7 @@ const SavedPasswordsLayout = ({ savedPasswords, handleRemove }) => {
 
                 {/* Password */}
                 <span className="w-1/5 text-xs text-left pl-2 break-words">
-                  {data.maskedPassword}
+                  {data.password}
                 </span>
 
                 {/* Action */}
