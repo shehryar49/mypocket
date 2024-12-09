@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import Sidebar from "../Dashboard/Sidebar/Sidebar";
 import DashboardHeader from "../Dashboard/DashboardHeader";
 import SaveYourPasswords from "./Save Your Passwords/SaveYourPasswords";
 import SavedPasswordsLayout from "./SavedPasswordsLayout";
 import SearchResults from "./Search Bar/SearchResults";
+import axios from 'axios';
 import { toast } from "sonner";
 
+
 const MyPasswords = () => {
+  const api_url = "http://localhost:8000";
   const [savedPasswords, setSavedPasswords] = useState([
     // DummyData
     {
@@ -50,6 +53,12 @@ const MyPasswords = () => {
       maskedPassword: "*********",
     },
   ]);
+  useEffect(() => {
+    const response = axios.get('http://localhost:8000/passwords');
+    const json = response.data;
+    console.log(json);
+    //setSavedPasswords(json.data);//[{serialNumber: 1,date: "08/12/2024",note: "Suhaib is gay",email: "suhaib@gaymail.com",password: "gay",maskedPassword: "***"}]);
+  });
   const [filteredSearch, setFilteredSearch] = useState(savedPasswords);
   /**
    * The handleRemove function filters out a saved password based on its serial number and updates the

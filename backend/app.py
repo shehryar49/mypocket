@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Depends, HTTPException,UploadFile
+from fastapi import FastAPI, Depends, HTTPException,File,UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-import psycopg
-import jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import os
+import jwt
+import psycopg
+import base64
+import shutil
+import glob
 
 # Initialize app and security context
 app = FastAPI()
@@ -15,7 +18,7 @@ app = FastAPI()
 # CORS Middleware Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4173"],  # React app running on localhost
+    allow_origins=["http://localhost:5173"],  # React app running on localhost
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,11 +35,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Database connection setup
-def get_db_connection():
-    conn = psycopg.connect(
-        dbname="mypocket", user="postgres", password="", host="localhost", port="5432"
-    )
-    return conn
+conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
+conn.autocommit = True
 
 # Models for User and Credentials
 class User(BaseModel):
@@ -47,6 +47,10 @@ class User(BaseModel):
 class Cred(BaseModel):
     email: str
     password: str
+class Password(BaseModel):
+    email: str
+    password: str
+    note: str
 
 
 def get_current_user(authorization: HTTPAuthorizationCredentials = Depends(security)):
@@ -69,164 +73,130 @@ def hash_password(password: str):
 def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
-
-
-
-
 @app.post("/signup")
 async def create_user(req: User):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
-            records = cur.fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
+    records = cur.fetchall()
 
-            if records:
-                raise HTTPException(status_code=409, detail="User with this email already exists!")
+    if records:
+        raise HTTPException(status_code=409, detail="User with this email already exists!")
             
-            hashed_password = hash_password(req.password)
-            try:
-                cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)", (req.name, req.email, hashed_password))
-                return JSONResponse({"msg": "User created successfully!"}, status_code=201)
-            except psycopg.errors.StringDataRightTruncation:
-                raise HTTPException(status_code=400, detail="Error: Data too long for one or more fields.")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-
+    hashed_password = hash_password(req.password)
+    try:
+        cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s);", (req.name, req.email, hashed_password))
+        cur.execute(f"SELECT id from users where email='{req.email}';")
+        id = cur.fetchall()[0][0]
+        os.system(f"mkdir uploads/{id}")
+        return JSONResponse({"msg": "User created successfully!"}, status_code=201)
+    except psycopg.errors.StringDataRightTruncation:
+        raise HTTPException(status_code=400, detail="An error occurred") #Error: Data too long for one or more fields.")
+    except Exception as e:
+        print(str(e))
+        raise HTTPException(status_code=500, detail="An error occurred")#f"Error: {str(e)}")
 
 
 
 @app.post("/login")
 async def login(req: Cred):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT password, name FROM users WHERE email = %s", (req.email,))
-            records = cur.fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT password, name, id FROM users WHERE email = %s", (req.email,))
+    records = cur.fetchall()
+    print(records)
+    if not records or not verify_password(req.password, records[0][0]):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    token = create_access_token(data={"email": req.email, "name": records[0][1],"id": records[0][2]})
+    return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email})
 
-            if not records or not verify_password(req.password, records[0][0]):
-                raise HTTPException(status_code=401, detail="Incorrect email or password")
-            
-            token = create_access_token(data={"email": req.email, "name": records[0][1]})
-            return JSONResponse({"access_token": token})
-
-
-
-
+# Secure endpoints
 
 @app.get("/home")
 async def home(authorization: HTTPAuthorizationCredentials = Depends(security)):
-    token = authorization.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
-    return JSONResponse({"msg": "Welcome home", "user": payload['name']})
-
-import shutil
-from typing import List
-
-
-
-class Folder(BaseModel):
-    folder_name: str
-    created_by: str
-    access_list: List[str]
-    folder_size: int
-
-class FileInfo(BaseModel):
-    file_name: str
-    file_type: str
-    folder_id: int
-    created_by: str
-    file_size: int
-    access_list: List[str]
-
-
-def create_folder_on_server(folder_name: str, folder_id: str):
-    folder_path = os.path.join("uploads", folder_id)
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    return folder_path
-
-def save_file(file: UploadFile, folder_path: str):
-    file_path = os.path.join(folder_path, file.filename)
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    return file_path
-
-
-
-
-
-
-@app.post("/create_folder")
-async def create_folder(folder: Folder, authorization: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(authorization)
-    
-    # Generate folder_id
-    folder_id = f"{folder.folder_name}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
-    
-    # Create the folder on the server
-    folder_path = create_folder_on_server(folder.folder_name, folder_id)
-    
-    # Insert folder info into the database
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO folders (folder_name, created_by, access_list, folder_size) 
-                VALUES (%s, %s, %s, %s) RETURNING folder_id
-            """, (folder.folder_name, folder.created_by, folder.access_list, folder.folder_size))
-            conn.commit()
-            folder_id = cur.fetchone()[0]
-    
-    return JSONResponse({"msg": "Folder created successfully", "folder_id": folder_id})
-
-
-
-from fastapi import File, UploadFile
+    return JSONResponse({"msg": "Welcome home", "user": user['name']})
 
 @app.post("/upload_file")
-async def upload_file(folder_id: int, file: UploadFile = File(...), authorization: HTTPAuthorizationCredentials = Depends(security)):
+async def upload_file(folder_path: str, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(authorization)
+    read = 0
+    total = file.size
+    opened_file = open(f'uploads/{user["id"]}/{folder_path}/{file.filename}',"wb")
+    while read < total:
+        bytes = await file.read(1024)
+        opened_file.write(bytes)
+        read += 1024
+    opened_file.close()
+    return JSONResponse({"msg": "File uploaded successfully", "file_path": folder_path})
+@app.get("/delete_file")
+async def delete_file(file_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    os.remove(f'uploads/{user["id"]}/{file_path}')
+    return JSONResponse({'msg': 'File deleted'})
+
+@app.get("/create_folder")
+async def create_folder(folder_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    os.mkdir(f'uploads/{user["id"]}/{folder_path}')
+    return JSONResponse({'msg': 'Folder created'})
+
+
+@app.delete("/folder")
+async def delete_folder(folder_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    shutil.rmtree(f'uploads/{user["id"]}/{folder_path}')
+    return JSONResponse({'msg': 'Folder deleted'})
+
+@app.get("/storage_info")
+async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    print(user)
+    my_path = f"uploads/{user['id']}"
+    mp4_videos = glob.glob(my_path + '/**/*.mp4', recursive=True)
+    mkv_videos = glob.glob(my_path + '/**/*.mkv', recursive=True)
+    mp3_files = glob.glob(my_path + '/**/*.mp3', recursive=True)
+    wav_files = glob.glob(my_path + '/**/*.wav', recursive=True)
+    png_files = glob.glob(my_path + '/**/*.png', recursive=True)
+    jpg_files = glob.glob(my_path + '/**/*.jpg', recursive=True)
     
-    # Fetch folder details
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM folders WHERE folder_id = %s", (folder_id,))
-            folder = cur.fetchone()
-            if not folder:
-                raise HTTPException(status_code=404, detail="Folder not found")
-    
-    # Save the file on the server inside the folder
-    folder_name = folder[1]  # folder_name from the fetched record
-    folder_path = os.path.join("uploads", folder_name)
-    file_path = save_file(file, folder_path)
-    
-    # Insert file info into the database
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO files (file_name, file_type, folder_id, created_by, file_size, access_list)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (file.filename, file.content_type, folder_id, user['email'], len(file.file.read()), []))  # Access list as empty for now
-            conn.commit()
+    info = {
+        'videos': len(mp4_videos)+len(mkv_videos),
+        "audios": len(mp3_files)+len(wav_files),
+        'images': len(png_files)+len(jpg_files)
+        }
+    return JSONResponse(info)   
 
-    return JSONResponse({"msg": "File uploaded successfully", "file_path": file_path})
+@app.get("/passwords")
+async def get_passwords(auth: HTTPAuthorizationCredentials = Depends(security)):
+    print("received req")
+    user = get_current_user(auth)
+    print("auth passed")
+    cur = conn.cursor()
+    cur.execute(f"select id,email,pass,note,to_char(date,'dd/mm/yyyy') from passwords where userid={user['id']}")
+    records = cur.fetchall()
+    keys = ['serialNumber','email','password','note','date']
+    result = []
+    for record in records:
+        tmp = {}
+        i = 0
+        for elem in record:
+            tmp[keys[i]] = elem
+            i += 1
+        result.append(tmp)
+    return JSONResponse({'data': result})    
 
-# Get files in a folder
-@app.get("/get_files/{folder_id}")
-async def get_files(folder_id: int, authorization: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(authorization)
-    
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM files WHERE folder_id = %s", (folder_id,))
-            files = cur.fetchall()
-            return {"files": files}
+@app.post("/passwords")
+async def add_password(req: Password,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute(f"insert into passwords(userid,email,pass,note) VALUES({user['id']},'{req.email}','{req.password}','{req.note}')")    
+    return JSONResponse({'msg': 'Added'},201)
 
-
-
-
+@app.delete("/passwords")
+async def delete_password(id: int,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute(f"delete from passwords where id={id}")
+    return JSONResponse({'msg': 'Success'},204)
 
 if __name__ == "__main__":
     import uvicorn

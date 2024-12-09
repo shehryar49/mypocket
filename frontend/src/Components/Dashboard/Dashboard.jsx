@@ -46,7 +46,7 @@ const Dashboard = () => {
             <div className="flex flex-col justify-start items-start ml-4 dark:text-gray-300">
               <h1 className="text-base font-semibold">Task</h1>
               <p className="text-sm font-normal text-gray-400">
-                Hi, welcome to task my pocket
+                Hi, here here welcome to task my pocket
               </p>
             </div>
 

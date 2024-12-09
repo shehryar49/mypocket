@@ -5,12 +5,12 @@ import { Toaster } from "sonner";
 
 const App = () => {
   return (
-    <>
+    
       <AuthProvider>
         <Routing />
         <Toaster position="top-right"richColors expand={true}/>
       </AuthProvider>
-    </>
+    
   );
 };
 

@@ -30,11 +30,11 @@ const SignIn = () => {
       const response = await axios.post("http://127.0.0.1:8000/login", {
         email,
         password,
-      });
-      const { access_token } = response.data; // Get only the access token
-  
+      });  
+      const { access_token} = response.data; // Get only the access token
+      
       // Store the token and authenticate the user
-      login(access_token); 
+      login(access_token,{'name': response.data.name,'email': response.data.email}); 
   
       navigate("/dashboard");
     } catch (error) {
