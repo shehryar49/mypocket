@@ -87,7 +87,7 @@ async def create_user(req: User):
     hashed_password = hash_password(req.password)
     try:
         cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s);", (req.name, req.email, hashed_password))
-        cur.execute(f"SELECT id from users where email='{req.email}';")
+        cur.execute("SELECT id from users where email=%s",(req.email,))
         id = cur.fetchall()[0][0]
         os.system(f"mkdir uploads/{id}")
         return JSONResponse({"msg": "User created successfully!"}, status_code=201)
