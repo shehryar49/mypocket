@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 // The AuthContext to manage authentication and user data
 export const AuthContext = createContext();
-
+const API_URL = "http://localhost:8000";
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
     name: "",
@@ -15,7 +15,7 @@ const AuthProvider = ({ children }) => {
   const [loginDevice, setLoginDevice] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
-
+  const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
   // Logout function to clear state and localStorage
   const logout = async () => {
     try {
@@ -37,8 +37,8 @@ const AuthProvider = ({ children }) => {
       localStorage.setItem("token", token);
       setIsAuthenticated(true);
       setUser(user);
-      console.log(user);
-      toast.success("You’re now signed in.");
+      setImageUrl(API_URL+`/profile_pic?id=${user.id}&r=1234`);
+      toast.success("You're now signed in.");
     } catch (error) {
       toast.error("Login failed. Please try again.");
     }
@@ -94,6 +94,9 @@ const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        imageUrl,
+        setUser,
+        setImageUrl,
         loginTime,
         ipAddress,
         loginDevice,

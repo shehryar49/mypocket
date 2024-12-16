@@ -56,10 +56,7 @@ const MyStorage = () => {
    */
   const handleTotalStoragePercent = () => {
     const percent = (storageData.usedStorage / storageData.totalStorage) * 100;
-    const cloudPercent =
-      (storageData.usedCloudStorage / storageData.cloudStorage) * 100;
     setStoragePercent(Math.round(percent));
-    setCloudStoragePercent(Math.round(cloudPercent));
   };
 
   return (
@@ -84,7 +81,7 @@ const MyStorage = () => {
           {/* Storage */}
           <div className="flex flex-col md:flex-row justify-between h-auto md:h-64 ">
             {/* Internal and cloud storage */}
-            <div className="flex flex-col gap-6 p-4 flex-grow max-w-lg justify-center">
+            <div className="flex flex-col gap-4 p-4 flex-grow max-w-lg justify-center">
               {/* Internal storage */}
               <div className="flex items-center border border-gray-300 dark:border-gray-800 dark:bg-gray-800 rounded-xl h-24">
                 <CircularProgressBar
@@ -100,31 +97,10 @@ const MyStorage = () => {
                     {storageData.usedStorage} GB of {storageData.totalStorage}{" "}
                     GB used
                   </p>
-                  <h1 className="md:text-xs lg:text-sm text-sm font-normal text-blue-500 dark:text-blue-600 dark:hover:text-blue-700 hover:text-blue-700 cursor-pointer">
-                    View Details
-                  </h1>
+
                 </div>
               </div>
 
-              {/* Cloud storage */}
-              <div className="flex items-center border border-gray-300 dark:border-gray-800 dark:bg-gray-800 rounded-xl h-24 ">
-                <CircularProgressBar
-                  handleTotalStoragePercent={cloudStoragePercent}
-                />
-
-                {/* Cloud storage Data used */}
-                <div className="flex flex-col gap-2 ml-2 ">
-                  <h1 className="md:text-xs lg:text-sm text-sm font-normal text-gray-500 dark:text-gray-300">
-                    Cloud Storage
-                  </h1>
-                  <p className="md:text-xs lg:text-sm text-sm font-semibold dark:text-gray-200">
-                    {storageData.usedCloudStorage} GB of 2 TB used
-                  </p>
-                  <h1 className="md:text-xs lg:text-sm text-sm font-normal text-blue-500 dark:text-blue-600 dark:hover:text-blue-700 hover:text-blue-700 cursor-pointer">
-                    View Details
-                  </h1>
-                </div>
-              </div>
             </div>
 
             {/* Files and complete Storage */}
@@ -134,45 +110,7 @@ const MyStorage = () => {
               <FilesStorage storageData={storageData.filesStorage} />
             </div>
           </div>
-          {/* Complete Storage */}
-          <div className="flex flex-col md:w-72 w-full items-center mt-8 justify-center ">
-            <TotalStorageProgressBar
-              handleTotalStoragePercent={storagePercent}
-            />
-
-            {/* Used, Available, total storage */}
-            <div className="flex gap-12 mt-5 mb-12">
-              {/* Used */}
-              <div className="flex flex-col items-center">
-                <h1 className="text-xs font-normal text-gray-400 dark:text-gray-300">
-                  Used
-                </h1>
-                <h1 className="text-sm font-semibold dark:text-gray-200">
-                  {storageData.usedStorage} GB
-                </h1>
-              </div>
-
-              {/* Available */}
-              <div className="flex flex-col items-center">
-                <h1 className="text-xs font-normal text-gray-400 dark:text-gray-300">
-                  Available
-                </h1>
-                <h1 className="text-sm font-semibold dark:text-gray-200">
-                  {storageData.availableStorage} GB
-                </h1>
-              </div>
-
-              {/* Total */}
-              <div className="flex flex-col items-center">
-                <h1 className="text-xs font-normal text-gray-400 dark:text-gray-300">
-                  Total
-                </h1>
-                <h1 className="text-sm font-semibold dark:text-gray-200">
-                  {storageData.totalStorage} GB
-                </h1>
-              </div>
-            </div>
-          </div>
+ 
         </div>
       </div>
     </>

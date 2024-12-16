@@ -91,11 +91,11 @@ const SaveYourPasswords = ({ setSavedPasswords }) => {
     const config  = {headers: {Authorization: `Bearer ${token}`,'Content-type': 'application/json'},method: "POST",body: JSON.stringify(
                       {email: email,password: password,note: note})};
       
-      fetch(API_URL+"/passwords",config).then((response) => {
+      fetch(API_URL+"/passwords",config).then((response) => {return response.json()}).then((response) => {
         setSavedPasswords((prevPasswords) => [
           ...prevPasswords,
           {
-            serialNumber: prevPasswords.length + 1,
+            serialNumber: response.id,
             date: formattedDate,
             note: note,
             email: email,

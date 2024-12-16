@@ -4,12 +4,14 @@ import DashboardHeader from "../Dashboard/DashboardHeader";
 import FileCard from "./FileCard";
 import RecentFiles from "./RecentFiles/RecentFiles";
 import SearchResults from "./Search Bar/SearchResults";
+import axios from "axios";
 
 const MyFiles = () => {
   const [filesData, setFilesData] = useState([]);
   const [shared_Users, setShared_Users] = useState([]);
   const [filteredSearch, setFilteredSearch] = useState([]);
   // dummyData
+  const API_URL = "http://localhost:8000";
   const dummyData = [
     {
       name: "Document",
@@ -86,30 +88,19 @@ const MyFiles = () => {
           lastModified: "2024-09-01",
         },
       ],
-    },
-    {
-      name: "Passwords",
-      type: "password",
-      insideFiles: 300,
-      files: [
-        {
-          name: "insta password.txt",
-          sharedUsers: ["Anas"],
-          fileSize: "1 MB",
-          lastModified: "2024-08-10",
-        },
-        {
-          name: "file.txt",
-          sharedUsers: ["Anila", "Ali", "Zain"],
-          fileSize: "2 MB",
-          lastModified: "2024-09-01",
-        },
-      ],
-    },
+    }
   ];
 
   useEffect(() => {
-    setFilesData(dummyData);
+    
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/files",config).then((response) => {
+      setFilesData(response.data.data);
+      //console.log(response.data.data);
+      //console.log(dummyData);
+    });
+    //setFilesData(dummyData);
     /* This block of code is iterating over the `dummyData` array, which contains different types of
    files with shared user information. It is extracting all unique shared users from the files data
    and storing them in the `allSharedUsers` array. */

@@ -52,6 +52,7 @@ class Password(BaseModel):
     email: str
     password: str
     note: str
+
 def get_folder_size(folder):
    return sum(file.stat().st_size for file in Path(folder).rglob('*'))
 
@@ -114,6 +115,12 @@ async def changepassword(req: Cred, auth: HTTPAuthorizationCredentials = Depends
     hashed_password = hash_password(new_password)
     cur = conn.cursor()
     cur.execute(f"update users set password='{hashed_password}' where id={user['id']}")
+    return JSONResponse({},status_code=200)
+@app.get("/editinfo")
+async def changename(name: str,contact: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute('update users set name = %s',(name,))
     return JSONResponse({},status_code=200)
 
 @app.get("/home")
@@ -197,6 +204,61 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
         }
     return JSONResponse(info)   
 
+@app.get("/files")
+async def getfiles(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    print(user)
+    my_path = f"uploads/{user['id']}"
+    mp4_videos = glob.glob(my_path + '/**/*.mp4', recursive=True)
+    mkv_videos = glob.glob(my_path + '/**/*.mkv', recursive=True)
+    mp3_files = glob.glob(my_path + '/**/*.mp3', recursive=True)
+    wav_files = glob.glob(my_path + '/**/*.wav', recursive=True)
+    png_files = glob.glob(my_path + '/**/*.png', recursive=True)
+    jpg_files = glob.glob(my_path + '/**/*.jpg', recursive=True)
+    
+    videos = mp4_videos + mkv_videos
+    audios = mp3_files + wav_files
+    images = png_files + jpg_files
+    
+    all_files = glob.glob(my_path + '/**/*.*',recursive = True)
+    size_map = {}
+    prefix_len = len(my_path)
+    for file in all_files:
+        st = os.stat(file)
+        size = st.st_size
+        size_map[file[prefix_len+1:]] = size
+    
+    documents = [x[prefix_len+1:] for x in all_files if not (x in videos or x in audios or x in images)]
+    videos = [x[prefix_len+1:] for x in videos]
+    audios = [x[prefix_len+1:] for x in audios]
+    images = [x[prefix_len+1:] for x in images]
+    
+    a = {'name': 'Documents','type': 'document','files': []}
+    b = {'name': 'Audios','type': 'audio','files': []}
+    c = {'name': 'Videos','type': 'video','files': []}
+    d = {'name': 'Images','type': 'image','files': []}
+    
+    for elem in documents:
+        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
+        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
+        a['files'].append(file_obj)
+    for elem in audios:
+        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
+        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
+        b['files'].append(file_obj)
+    for elem in videos:
+        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
+        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
+        c['files'].append(file_obj)
+    for elem in images:
+        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
+        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
+        d['files'].append(file_obj)
+        
+
+
+    return JSONResponse({'data': [a,b,c,d]})
+
 @app.get("/passwords")
 async def get_passwords(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
@@ -219,7 +281,9 @@ async def add_password(req: Password,auth: HTTPAuthorizationCredentials = Depend
     user = get_current_user(auth)
     cur = conn.cursor()
     cur.execute(f"insert into passwords(userid,email,pass,note) VALUES({user['id']},'{req.email}','{req.password}','{req.note}')")    
-    return JSONResponse({'msg': 'Added'},201)
+    cur.execute(f'select id from passwords where email = \'{req.email}\' and pass=\'{req.password}\' and note=\'{req.note}\' and userid={user["id"]}')
+    records = cur.fetchall()
+    return JSONResponse({'msg': 'Added','id': records[0][0]},201)
 
 @app.delete("/passwords")
 async def delete_password(id: int,auth: HTTPAuthorizationCredentials = Depends(security)):
@@ -227,9 +291,28 @@ async def delete_password(id: int,auth: HTTPAuthorizationCredentials = Depends(s
     cur = conn.cursor()
     cur.execute(f"delete from passwords where id={id}")
     return Response(status_code=204)
+
 @app.get("/profile_pic")
-async def profile_pic(id: str):
+async def profile_pic(id: str,r: str):
+    #r is some random nonsense to avoid cache
     return FileResponse(f'profile_pictures/{id}.jpg')
+
+@app.post("/profile_pic")
+async def upload_profile_pic(image: UploadFile, auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    read = 0
+    total = image.size
+    if image.content_type != "image/jpeg":
+        return JSONResponse({'msg': 'Please upload a JPEG image'},400)
+    opened_file = open(f'profile_pictures/{user["id"]}.jpg',"wb")
+    while read < total:
+        bytes = await image.read(1024)
+        opened_file.write(bytes)
+        read += 1024
+    opened_file.close()
+    return JSONResponse({"msg": "File uploaded successfully"})    
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

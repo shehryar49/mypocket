@@ -78,7 +78,7 @@ const MyPasswords = () => {
       );
       const updatedPassword = filteredPassword.map((password, index) => ({
       ...password,
-      serialNumber: index + 1,
+      serialNumber: password.serialNumber,
       }));
       setSavedPasswords(updatedPassword);
       toast.success("Your password has been removed successfully.");

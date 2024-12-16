@@ -5,7 +5,7 @@ import PersonalInfo from "./PersonalInfo";
 import DashboardHeader from "../Dashboard/DashboardHeader";
 
 const MyProfile = () => {
-  const { user } = useContext(AuthContext);
+  const { user,setUser } = useContext(AuthContext);
   return (
     <>
       <style>
