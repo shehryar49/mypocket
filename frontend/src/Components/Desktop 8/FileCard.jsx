@@ -5,6 +5,7 @@ import SharedUser from "./SharedUser";
 
 const FileCard = ({ sharedUsers, name, insideFiles, fileType, filesData }) => {
   // console.log(sharedUsers)
+  console.log(insideFiles);
   return (
     <div>
       {/* File card */}

@@ -47,7 +47,7 @@ const SharedUser = ({ user, insideFiles, fileType, filesData }) => {
                 key={index}
               >
                 <p className="text-blue-500 dark:text-blue-700 text-sm font-semibold text-center">
-                  {filteredFile.insideFiles}
+                  {insideFiles}
                 </p>
               </div>
             ))}
