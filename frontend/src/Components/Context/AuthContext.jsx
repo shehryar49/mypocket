@@ -46,36 +46,18 @@ const AuthProvider = ({ children }) => {
   
 
   // Sign-up function with API call to FastAPI server
-  const signup = async (newUser) => {
-    try {
-      // API call to FastAPI to create a new user
-      const response = await fetch("http://localhost:8000/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: newUser.name,
-          email: newUser.email,
-          password: newUser.password,  // Assuming password is included in the newUser object
-        }),
+  const signup = (newUser) => {
+      const config = {method: "POST",headers: {"Content-Type": "application/json"},body: JSON.stringify({name: newUser.name,email: newUser.email,password: newUser.password})};
+      fetch(API_URL+"/signup",config).then((response) => {
+        if(!response.ok)
+          throw new Error("");
+        return response.json();
+      }).then((json) => {
+        toast.success("You can login to your new account now!");
+        return json;
+      }).catch(() => {
+        toast.error("An error occurred");
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Successfully created the user
-        setUser(newUser);  // Store the new user data
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(newUser)); // Persist user data
-        toast.success("Account created successfully!");
-      } else {
-        // Handle server-side errors (e.g., email already exists)
-        toast.error(data.detail || "Sign-up failed. Please try again.");
-      }
-    } catch (error) {
-      toast.error("Sign-up failed. Please try again.");
-    }
   };
 
   useEffect(() => {

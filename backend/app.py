@@ -90,8 +90,10 @@ async def create_user(req: User):
         cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s);", (req.name, req.email, hashed_password))
         cur.execute("SELECT id from users where email=%s",(req.email,))
         id = cur.fetchall()[0][0]
-        os.system(f"mkdir uploads/{id}")
-        return JSONResponse({"msg": "User created successfully!"}, status_code=201)
+        os.system(f"mkdir -p uploads/{id}/root")
+
+        token = create_access_token(data={"email": req.email, "name": req.name,"id": id})
+        return JSONResponse({"msg": "User created successfully!","access_token": token}, status_code=201)
     except psycopg.errors.StringDataRightTruncation:
         raise HTTPException(status_code=400, detail="An error occurred") #Error: Data too long for one or more fields.")
     except Exception as e:
@@ -128,28 +130,28 @@ async def home(authorization: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(authorization)
     return JSONResponse({"msg": "Welcome home", "user": user['name']})
 
-@app.post("/upload_file")
-async def upload_file(folder_path: str, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
+@app.post("/upload")
+async def upload_file(path: str, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(authorization)
     read = 0
     total = file.size
-    opened_file = open(f'uploads/{user["id"]}/{folder_path}/{file.filename}',"wb")
+    opened_file = open(f'uploads/{user["id"]}/{path}/{file.filename}',"wb")
     while read < total:
         bytes = await file.read(1024)
         opened_file.write(bytes)
         read += 1024
     opened_file.close()
-    return JSONResponse({"msg": "File uploaded successfully", "file_path": folder_path})
+    return JSONResponse({"msg": "File uploaded successfully", "file_path": path})
 @app.get("/delete_file")
-async def delete_file(file_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+async def delete_file(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    os.remove(f'uploads/{user["id"]}/{file_path}')
+    os.remove(f'uploads/{user["id"]}{file_path}')
     return JSONResponse({'msg': 'File deleted'})
 
-@app.get("/create_folder")
-async def create_folder(folder_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+@app.get("/createfolder")
+async def create_folder(foldername: str,path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    os.mkdir(f'uploads/{user["id"]}/{folder_path}')
+    os.mkdir(f'uploads/{user["id"]}{path}/{foldername}')
     return JSONResponse({'msg': 'Folder created'})
 
 
@@ -158,6 +160,13 @@ async def delete_folder(folder_path: str,auth: HTTPAuthorizationCredentials = De
     user = get_current_user(auth)
     shutil.rmtree(f'uploads/{user["id"]}/{folder_path}')
     return JSONResponse({'msg': 'Folder deleted'})
+
+@app.delete("/file")
+async def delete_folder(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    os.remove(f'uploads/{user["id"]}{path}')
+    return JSONResponse({'msg': 'File deleted'})
+
 
 @app.get("/storage_info")
 async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
@@ -192,7 +201,6 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
     cur.execute(f"select COUNT(*) from passwords where userid={user['id']}")
     records = cur.fetchall()
     count = records[0][0]
-    #print(count)    
     info = {
         'videos': videos,
         "audios": audios,
@@ -205,60 +213,28 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
     return JSONResponse(info)   
 
 @app.get("/files")
-async def getfiles(auth: HTTPAuthorizationCredentials = Depends(security)):
+async def getfiles(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    print(user)
-    my_path = f"uploads/{user['id']}"
-    mp4_videos = glob.glob(my_path + '/**/*.mp4', recursive=True)
-    mkv_videos = glob.glob(my_path + '/**/*.mkv', recursive=True)
-    mp3_files = glob.glob(my_path + '/**/*.mp3', recursive=True)
-    wav_files = glob.glob(my_path + '/**/*.wav', recursive=True)
-    png_files = glob.glob(my_path + '/**/*.png', recursive=True)
-    jpg_files = glob.glob(my_path + '/**/*.jpg', recursive=True)
-    
-    videos = mp4_videos + mkv_videos
-    audios = mp3_files + wav_files
-    images = png_files + jpg_files
-    
-    all_files = glob.glob(my_path + '/**/*.*',recursive = True)
-    size_map = {}
-    prefix_len = len(my_path)
-    for file in all_files:
-        st = os.stat(file)
-        size = st.st_size
-        size_map[file[prefix_len+1:]] = size
-    
-    documents = [x[prefix_len+1:] for x in all_files if not (x in videos or x in audios or x in images)]
-    videos = [x[prefix_len+1:] for x in videos]
-    audios = [x[prefix_len+1:] for x in audios]
-    images = [x[prefix_len+1:] for x in images]
-    
-    a = {'name': 'Documents','type': 'document','files': []}
-    b = {'name': 'Audios','type': 'audio','files': []}
-    c = {'name': 'Videos','type': 'video','files': []}
-    d = {'name': 'Images','type': 'image','files': []}
-    
-    for elem in documents:
-        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
-        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
-        a['files'].append(file_obj)
-    for elem in audios:
-        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
-        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
-        b['files'].append(file_obj)
-    for elem in videos:
-        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
-        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
-        c['files'].append(file_obj)
-    for elem in images:
-        file_size = str(round(size_map[elem]/(1024**2),2))+" MB"
-        file_obj = {'name': elem,'sharedUsers': [],'fileSize': file_size,'lastModified': "2024-08-09"}
-        d['files'].append(file_obj)
-        
+    my_path = f"uploads/{user['id']}"+path
+    files = os.listdir(my_path)
+    result = []
+    for file in files:
+        isdir = os.path.isdir(my_path+'/'+file)
+        obj = {'id': path+'/'+file,'name': file,'isDir': isdir}
+        result.append(obj)
+    return JSONResponse({'data': result})
 
-
-    return JSONResponse({'data': [a,b,c,d]})
-
+@app.get("/sharedfiles")
+async def getfiles(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    my_path = f"uploads/{user['id']}"+path
+    files = os.listdir(my_path)
+    result = []
+    for file in files:
+        isdir = os.path.isdir(my_path+'/'+file)
+        obj = {'id': path+'/'+file,'name': file,'isDir': isdir}
+        result.append(obj)
+    return JSONResponse({'data': result})
 @app.get("/passwords")
 async def get_passwords(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)

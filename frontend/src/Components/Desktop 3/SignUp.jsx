@@ -90,11 +90,8 @@ const SignUp = () => {
     const newUser = { name, email, password };
     // Example API call
     // fetch('/signup', { method: 'POST', body: JSON.stringify(newUser) })
-    signup(newUser);
-    login(newUser);  // Mock login to simulate success
-    navigate("/dashboard");
-    toast.success("Your account has been successfully created. Welcome to My Pocket!");
-
+    const user = signup(newUser);
+    
     // Reset form after success
     setName("");
     setEmail("");

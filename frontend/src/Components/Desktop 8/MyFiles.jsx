@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../Dashboard/Sidebar/Sidebar";
-import DashboardHeader from "../Dashboard/DashboardHeader";
-import FileCard from "./FileCard";
-import RecentFiles from "./RecentFiles/RecentFiles";
-import SearchResults from "./Search Bar/SearchResults";
-import axios from "axios";
-import  {
-  FileBrowser,
-  FileNavbar,
-  FileToolbar,
-  FileList,
-  FileContextMenu,
-  IconFA
-} from '@codetez/react-file-manager-ctz'
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 
+import axios from "axios";
+import { toast } from "sonner";
+import { setChonkyDefaults } from 'chonky';
+import { ChonkyIconFA } from 'chonky-icon-fontawesome';
+
+
+setChonkyDefaults({ iconComponent: ChonkyIconFA });
+import {
+  FileBrowser,
+  FileContextMenu,
+  FileList,
+  ChonkyActions,
+  FileToolbar,
+} from 'chonky';
+
+import { TbArrowBadgeRight } from "react-icons/tb";
+
+const API_URL = "http://localhost:8000";
 const MyFiles = () => {
   /*const [filesData, setFilesData] = useState([]);
   const [shared_Users, setShared_Users] = useState([]);
@@ -205,267 +217,139 @@ const MyFiles = () => {
       </div>
     </>
   );*/
-  const files = [
+  const [files,setFiles] = useState([]);
+  const [folderChain,setFolderChain] = useState([{id: '/root',name: 'root',isDir: true}]);
+  const [currentPath,setCurrentPath] = useState("");
+  /*const files = [
+    { id: 'lht', name: 'Projects', isDir: true },
     {
-        "isDir": true,
-        id: "my-folder-id",
-        size: "412032",
-        name: 'my-folder',
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
+        id: 'mcd',
+        name: 'chonky-sphere-v2.png',
+        thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
     },
-    {
-        "isDir": true,
-        id: "my-cabinet-id",
-        size: "412032",
-        name: 'my-cabintet',
-        parentId: null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-    },
-    {
-        "isDir": true,
-        id: "my-large-name-folder-id",
-        size: "412032",
-        name: 'my-large-name-folder-some-long-text-folder-name-with-extra-long',
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-    },
-    {
-        "isDir": false,
-        "id": "6c96178b-caab-49f1-ab78-71b2bdd35df9",
-        "name": "document.pdf",
-        "fileName": "document-1721135342550.pdf",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "pdf",
-        "size": "412032",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-16T13:09:02.816Z",
-        "updatedAt": "2024-07-16T13:09:02.816Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-16T13:09:02.816Z"
-    },
-    {
-        "isDir": false,
-        "id": "f16c25af-7ad7-47a4-9059-420d84f0a9d9",
-        "name": "sample.pdf",
-        "fileName": "sample-1721302064130.pdf",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "pdf",
-        "size": "4293938",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-18T11:27:45.531Z",
-        "updatedAt": "2024-07-18T11:27:45.531Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-18T11:27:45.531Z"
-    },
-    {
-        isDir: false,
-        name: 'My test file name with large text in it with some extra text.txt',
-        id: 'my-large-text-id',
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-18T11:27:45.531Z"
-    },
-    {
-        "isDir": false,
-        "id": "f0c51e56-0644-4d1e-9027-372c120501e3",
-        "name": "IMG_20240715_102701.jpg",
-        "fileName": "img_20240715_102701-1721366694102.jpg",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "jpg",
-        "size": "2055155",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-19T05:24:54.897Z",
-        "updatedAt": "2024-07-19T05:24:54.897Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-19T05:24:54.897Z"
-    },
-    {
-        "isDir": false,
-        "id": "9b6f1439-c9f6-463c-b249-839dd122b6ee",
-        "name": "sample-checker.xlsx",
-        "fileName": "sample-checker-1721658285985.xlsx",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "xlsx",
-        "size": "8673",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-22T14:24:45.995Z",
-        "updatedAt": "2024-07-22T14:24:45.995Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-22T14:24:45.995Z"
-    },
-    {
-        "isDir": false,
-        "id": "cb1760a2-eb5a-4563-8503-de7eca116bad",
-        "name": "file_example_XLS_50.xls",
-        "fileName": "file_example_xls_50-1721658842139.xls",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "xls",
-        "size": "13824",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-22T14:34:02.149Z",
-        "updatedAt": "2024-07-22T14:34:02.149Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-22T14:34:02.149Z"
-    },
-    {
-        "isDir": false,
-        "id": "9c38dedc-e53f-467e-8b51-d123d7a4e675",
-        "name": "file_example_XLSX_100.xlsx",
-        "fileName": "file_example_xlsx_100-1721659053462.xlsx",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "xlsx",
-        "size": "9299",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-22T14:37:33.474Z",
-        "updatedAt": "2024-07-22T14:37:33.474Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-22T14:37:33.474Z"
-    },
-    {
-        "isDir": false,
-        "id": "59e9d4fb-abb1-4033-9938-adc6dc4b537b",
-        "name": "file_example_XLSX_1000.xlsx",
-        "fileName": "file_example_xlsx_1000-1721659081824.xlsx",
-        "filePath": "/public/uploads/codetez",
-        "slug": null,
-        "folderId": "a4ef0816-7628-4746-a6a7-84b3c37da851",
-        "metadataId": null,
-        "ext": "xlsx",
-        "size": "42669",
-        "versionNumber": null,
-        "keyword": null,
-        "note": null,
-        "description": null,
-        "remarks": null,
-        "status": 1,
-        "createdBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "updatedBy": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-        "createdAt": "2024-07-22T14:38:01.842Z",
-        "updatedAt": "2024-07-22T14:38:01.842Z",
-        "deletedAt": null,
-        "updatedUser": {
-            "id": "da0a005f-44d1-4bf8-98b3-fbd2db76d761",
-            "userName": "CannyMinds",
-            "firstName": "Christopher",
-            "lastName": "CannyMinds"
-        },
-        "modDate": "2024-07-22T14:38:01.842Z"
+  ];*/
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`},params: {path: '/root'}};
+    axios.get(API_URL+"/files",config).then((response) => {
+      console.log(response.data.data);
+      setFiles(response.data.data);
+      setCurrentPath("/root");
+    });
+  },[]);
+  const handlePathChange = (e) => {
+    setCurrentPath(e.target.value);
+  };
+  const reloadFiles = () => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`},params: {path: currentPath}};
+    axios.get(API_URL+"/files",config).then((response) => {
+      console.log(response.data.data);
+      setFiles(response.data.data);
+    });
+  };
+  const uploadFile = () => {
+      var upload_btn = document.getElementById('upload-file');
+      var files = upload_btn.files;
+      if(files.length == 1) {
+        var file = files[0];
+        var path = currentPath;
+        var formData = new FormData();
+        formData.append("file", file);
+        const token = localStorage.getItem("token");
+        const config = {headers: {Authorization: `Bearer ${token}`},method: "POST",body: formData};
+        var url = new URL(API_URL+"/upload");
+        url.searchParams.append('path', currentPath);
+        fetch(url.toString(), config).then(() => {
+          toast.success("File Uploaded");
+          reloadFiles();
+        });
+
+      }
+  };
+  const deleteFolder = (path) => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    var url = new URL(API_URL+"/folder");
+    url.searchParams.append('folder_path',path);
+    axios.delete(url.toString(),config).then(() => {
+      toast.success("Folder deleted");
+      reloadFiles();
+    });
+  }
+  const deleteFile = (path) => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    var url = new URL(API_URL+"/file");
+    url.searchParams.append('path',path);
+    axios.delete(url.toString(),config).then(() => {
+      toast.success("File deleted");
+      
+      reloadFiles();
+    });
+  }
+  
+  const handleAction = React.useCallback((data) => {
+    if(data.id == "open_files" && data.payload.files.length == 1 && data.payload.targetFile.isDir) {
+        const targetFile = data.payload.targetFile;
+        var path = "/";
+        path = targetFile.id;
+        const token = localStorage.getItem("token");
+        const config = {headers: {Authorization: `Bearer ${token}`},params: {path: path}};
+        axios.get(API_URL+"/files",config).then((response) => {
+            setFiles(response.data.data);
+            setCurrentPath(targetFile.id);
+        });
     }
+    else if(data.id == "open_files" && data.payload.files.length == 1 && !data.payload.targetFile.isDir) {
+      const targetFile = data.payload.targetFile;
+      toast.success("Your file is being decrypted. Download will begin automatically.");
+    }
+    else if(data.id == "upload_files") {
+      var upload_btn = document.getElementById('upload-file');
+      upload_btn.click();
+    }
+    else if(data.id == "create_folder") {
+      setOpen(true);
+    }
+    else if(data.id == "delete_files") {
+      var todelete = data.state.contextMenuTriggerFile.id;
+      var files = data.state.selectedFiles; 
+      for(var i = 0; i < files.length; i++) {
+        var file = files[i];
+        if(file.isDir)
+          deleteFolder(file.id);
+        else
+          deleteFile(file.id);
+      }
+      //console.log(JSON.stringify(files));;
+    }
+  
+  }, []);
+
+  const myFileActions = [
+    ChonkyActions.UploadFiles,
+    ChonkyActions.CreateFolder,
+    ChonkyActions.DeleteFiles
   ];
+  const [open, setOpen] = React.useState(false);
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+  const createFolder = (foldername) => {
+    const path = currentPath;
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`},params: {foldername: foldername,path: path}};
+    axios.get(API_URL+"/createfolder",config).then(() => {
+      toast.success("Folder created");
+      reloadFiles();
+    });
+  };
   return (
     <>
     <style>
@@ -480,15 +364,59 @@ const MyFiles = () => {
     >
       {/* Sidebar */}
       <Sidebar />
+
       {/*main content*/}
       <div className="flex flex-col w-full md:ml-64">
-      <FileBrowser iconComponent={IconFA} files={files}>
-          <FileNavbar />
-          <FileToolbar />
-          <FileList />
-          <FileContextMenu />
-      </FileBrowser>
-      </div>
+      <React.Fragment>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        PaperProps={{
+          component: 'form',
+          onSubmit: (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const formJson = Object.fromEntries(formData.entries());
+            const foldername = formJson.foldername;
+            createFolder(foldername);
+            handleClose();
+          },
+        }}
+      >
+        <DialogTitle>Create new folder</DialogTitle>
+        <DialogContent>
+
+          <TextField
+            autoFocus
+            required
+            margin="dense"
+            id="name"
+            name="foldername"
+            label="Folder Name"
+            type="text"
+            fullWidth
+            variant="standard"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button type="submit">Ok</Button>
+        </DialogActions>
+      </Dialog>
+    </React.Fragment>
+        <input id="upload-file" type="file" hidden="true" onChange={uploadFile}/>
+        <div className="flex w-full md-4">
+        <input type="text" class="border border-gray-300" placeholder="Path" value={currentPath} onChange={handlePathChange} />
+        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={reloadFiles}>Go</button>
+        </div><br></br>
+<br></br>
+        <FileBrowser files={files} onFileAction={handleAction} fileActions={myFileActions}>
+            <FileToolbar />
+            <FileList />
+            <FileContextMenu />
+        </FileBrowser>
+
+    </div>
     </div>
   </>
   );
