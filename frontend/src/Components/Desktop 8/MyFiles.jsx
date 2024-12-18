@@ -21,213 +21,19 @@ import {
   FileList,
   ChonkyActions,
   FileToolbar,
+  defineFileAction
 } from 'chonky';
 
 import { TbArrowBadgeRight } from "react-icons/tb";
 
 const API_URL = "http://localhost:8000";
 const MyFiles = () => {
-  /*const [filesData, setFilesData] = useState([]);
-  const [shared_Users, setShared_Users] = useState([]);
-  const [filteredSearch, setFilteredSearch] = useState([]);
-  // dummyData
-  const API_URL = "http://localhost:8000";
-  const dummyData = [
-    {
-      name: "Document",
-      type: "document",
-      insideFiles: 300,
-      files: [
-        {
-          name: "Report.docx",
-          sharedUsers: ["Anas"],
-          fileSize: "1 MB",
-          lastModified: "2024-08-09",
-        },
-        {
-          name: "Ux-Ui.zip",
-          sharedUsers: ["Anila", "Ali", "Zain"],
-          fileSize: "4 MB",
-          lastModified: "2024-09-01",
-        },
-      ],
-    },
-    {
-      name: "Audio",
-      type: "audio",
-      insideFiles: 400,
-      files: [
-        {
-          name: "Birds chirping.mp3",
-          sharedUsers: ["Anas"],
-          fileSize: "1 MB",
-          lastModified: "2024-08-10",
-        },
-        {
-          name: "voice recording.mp3",
-          sharedUsers: ["Anila", "Ali", "Zain", "Hassan"],
-          fileSize: "4 MB",
-          lastModified: "2024-09-01",
-        },
-      ],
-    },
-    {
-      name: "Videos",
-      type: "video",
-      insideFiles: 20,
-      files: [
-        {
-          name: "The Notebook.mp4",
-          sharedUsers: ["Anas"],
-          fileSize: "1 GB",
-          lastModified: "2024-08-10",
-        },
-        {
-          name: "Mr.Beast.mp4",
-          sharedUsers: ["Anila", "Ali", "Zain"],
-          fileSize: "4 MB",
-          lastModified: "2024-09-01",
-        },
-      ],
-    },
-    {
-      name: "Images",
-      type: "image",
-      insideFiles: 100,
-      files: [
-        {
-          name: "Website Design.png",
-          sharedUsers: ["Asad", "Ali", "Usman"],
-          fileSize: "0.5 MB",
-          lastModified: "2024-09-04",
-        },
-        {
-          name: "profile.png",
-          sharedUsers: ["Anila", "Ali", "Zain"],
-          fileSize: "1 MB",
-          lastModified: "2024-09-01",
-        },
-      ],
-    }
-  ];
 
-  useEffect(() => {
-    
-    const token = localStorage.getItem("token");
-    const config = {headers: {Authorization: `Bearer ${token}`}};
-    axios.get(API_URL+"/files",config).then((response) => {
-      setFilesData(response.data.data);
-      //console.log(response.data.data);
-      //console.log(dummyData);
-    });
-    //setFilesData(dummyData);
-    /* This block of code is iterating over the `dummyData` array, which contains different types of
-   files with shared user information. It is extracting all unique shared users from the files data
-   and storing them in the `allSharedUsers` array. 
-    const allSharedUsers = [];
-    dummyData.forEach((type) => {
-      type.files.forEach((file) => {
-        file.sharedUsers.forEach((user) => {
-          if (!allSharedUsers.some((u) => u === user)) {
-            allSharedUsers.push(user);
-          }
-        });
-      });
-    });
-    setShared_Users(allSharedUsers);
-  }, []);
-
-  return (
-    <>
-      <style>
-        {`
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
-      `}
-      </style>
-
-      <div
-        className="flex flex-col md:flex-row dark:bg-gray-900"
-        style={{ fontFamily: "Poppins" }}
-      >
-        {/* Sidebar }
-        <Sidebar />
-
-        <div className="flex flex-col w-full md:ml-64">
-          {/* Heading }
-          <DashboardHeader Heading={"My Files"} display={"opacity-0"} />
-
-          {/* SearchBar }
-          <SearchResults
-            filteredSearch={filteredSearch}
-            setFilteredSearch={setFilteredSearch}
-            filesData={filesData}
-          />
-
-          {/* Heading for cards }
-          <div className="flex  md:block">
-            <h1 className="text-2xl mt-6 mb-1 ml-6 dark:text-gray-200">All Files</h1>
-          </div>
-
-          {/* File Cards }
-          <div className="grid grid-cols-1 mt-1">
-            {/* First three cards }
-            <div className="flex flex-wrap xl:flex-nowrap justify-center">
-              {filesData.slice(0, 3).map((fileTypeData) => (
-                <div
-                  key={fileTypeData.type}
-                  className="flex justify-center mx-2 mb-2"
-                >
-                  <FileCard
-                    sharedUsers={shared_Users}
-                    insideFiles={fileTypeData.files.length}
-                    fileType={fileTypeData.type}
-                    name={"Gay"}
-                    filesData={filesData}
-                    className="transform transition-transform duration-300 hover:scale-105"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Last two cards }
-            <div className="flex flex-wrap xl:flex-nowrap justify-center lg:mt-4 gap-2">
-              {filesData.slice(3, 5).map((fileTypeData, index) => (
-                <div
-                  key={fileTypeData.type}
-                  className="flex justify-center lg:mx-12"
-                >
-                  <FileCard
-                    sharedUsers={shared_Users}
-                    insideFiles={fileTypeData.insideFiles}
-                    fileType={fileTypeData.type}
-                    name={fileTypeData.name}
-                    filesData={filesData}
-                    className="transform transition-transform duration-300 hover:scale-105"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Files }
-          <div>
-            <RecentFiles filesData={filesData} />
-          </div>
-        </div>
-      </div>
-    </>
-  );*/
   const [files,setFiles] = useState([]);
-  const [folderChain,setFolderChain] = useState([{id: '/root',name: 'root',isDir: true}]);
   const [currentPath,setCurrentPath] = useState("");
-  /*const files = [
-    { id: 'lht', name: 'Projects', isDir: true },
-    {
-        id: 'mcd',
-        name: 'chonky-sphere-v2.png',
-        thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
-    },
-  ];*/
+  const [open, setOpen] = React.useState(false);
+  const [shareopen, setshareOpen] = React.useState(false);
+  const [filesToShare,setFilesToShare] = React.useState([]);
   useEffect(() => {
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`},params: {path: '/root'}};
@@ -288,9 +94,35 @@ const MyFiles = () => {
       reloadFiles();
     });
   }
-  
+  const sharefiles  = (email) => {
+    alert("share files called "+filesToShare.length.toString());
+    if(filesToShare.length > 1) {
+      toast.error("Select one file at a time!");
+      setFilesToShare([]);
+      return;
+    }
+    if(filesToShare.length == 0) {
+      toast.error("Select a file to share!");
+      setFilesToShare([]);
+      return;
+    }
+    const payload = {
+      sharedTo: email,
+      path: filesToShare[0].id
+    };
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},method: "POST",body: JSON.stringify(payload)};
+    fetch(API_URL+"/sharedfiles",config).then((response) => {
+      if(response.ok)
+        toast.success("File shared");
+      else
+        toast.error("An error occurred while sharing this file");
+      setFilesToShare([]);
+    });
+
+  };
   const handleAction = React.useCallback((data) => {
-    if(data.id == "open_files" && data.payload.files.length == 1 && data.payload.targetFile.isDir) {
+    if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && data.payload.targetFile.isDir) {
         const targetFile = data.payload.targetFile;
         var path = "/";
         path = targetFile.id;
@@ -301,7 +133,7 @@ const MyFiles = () => {
             setCurrentPath(targetFile.id);
         });
     }
-    else if(data.id == "open_files" && data.payload.files.length == 1 && !data.payload.targetFile.isDir) {
+    else if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && !data.payload.targetFile.isDir) {
       const targetFile = data.payload.targetFile;
       toast.success("Your file is being decrypted. Download will begin automatically.");
     }
@@ -322,20 +154,34 @@ const MyFiles = () => {
         else
           deleteFile(file.id);
       }
-      //console.log(JSON.stringify(files));;
+    }
+    else if(data.id == "share") {
+      var files = data.state.selectedFiles;
+      //var file = files[0].id;
+      //alert("sharing the file" + file);
+      setFilesToShare(files);
+      setshareOpen(true);
     }
   
   }, []);
-
+  const shareFile = defineFileAction({
+    id: 'share',
+    button: {
+        name: 'Share',
+        toolbar: true,
+    },
+} );
   const myFileActions = [
     ChonkyActions.UploadFiles,
     ChonkyActions.CreateFolder,
-    ChonkyActions.DeleteFiles
+    ChonkyActions.DeleteFiles,
+    shareFile
   ];
-  const [open, setOpen] = React.useState(false);
 
-  const handleClickOpen = () => {
-    setOpen(true);
+
+
+  const handleShareClose = () => {
+    setshareOpen(false);
   };
 
   const handleClose = () => {
@@ -367,6 +213,43 @@ const MyFiles = () => {
 
       {/*main content*/}
       <div className="flex flex-col w-full md:ml-64">
+      <React.Fragment>
+      <Dialog
+        open={shareopen}
+        onClose={handleShareClose}
+        PaperProps={{
+          component: 'form',
+          onSubmit: (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const formJson = Object.fromEntries(formData.entries());
+            sharefiles(formJson.email);
+            handleShareClose();
+
+          },
+        }}
+      >
+        <DialogTitle>Share this</DialogTitle>
+        <DialogContent>
+
+          <TextField
+            autoFocus
+            required
+            margin="dense"
+            id="name"
+            name="email"
+            label="Email"
+            type="text"
+            fullWidth
+            variant="standard"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleShareClose}>Cancel</Button>
+          <Button type="submit">Ok</Button>
+        </DialogActions>
+      </Dialog>
+    </React.Fragment>
       <React.Fragment>
       <Dialog
         open={open}

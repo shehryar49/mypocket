@@ -32,30 +32,7 @@ const SharedFilesLayout = ({
         <Sidebar />
 
         {/* Main content */}
-        <div className="flex flex-col w-full md:ml-64">
-          <DashboardHeader Heading={"Shared Files"} display={"opacity-0"} />
 
-          {/* Search Bar */}
-          <SearchResults
-            sharedFilesData={sharedFilesData}
-            filteredSearch={filteredSearch}
-            setFilteredSearch={setFilteredSearch}
-          />
-
-          {/* Header */}
-          <FilterButton
-            sharedFilesData={sharedFilesData}
-            filteredFiles={filteredFiles}
-            handleFilterChange={handleFilterChange}
-            handleAddFile={handleAddFile}
-            filePermission={filePermission}
-            setFilePermission={setFilePermission}
-            fileInputRef={fileInputRef}
-          />
-
-          {/* Shared Files List*/}
-          <Files sharedFilesData={filteredFiles} />
-        </div>
       </div>
     </>
   );

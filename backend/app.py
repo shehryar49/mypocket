@@ -52,6 +52,9 @@ class Password(BaseModel):
     email: str
     password: str
     note: str
+class SharedFile(BaseModel):
+    sharedTo: str
+    path: str
 
 def get_folder_size(folder):
    return sum(file.stat().st_size for file in Path(folder).rglob('*'))
@@ -122,13 +125,10 @@ async def changepassword(req: Cred, auth: HTTPAuthorizationCredentials = Depends
 async def changename(name: str,contact: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     cur = conn.cursor()
-    cur.execute('update users set name = %s',(name,))
+    cur.execute('update users set name = %s where id=%s',(name,int(user["id"])))
     return JSONResponse({},status_code=200)
 
-@app.get("/home")
-async def home(authorization: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(authorization)
-    return JSONResponse({"msg": "Welcome home", "user": user['name']})
+
 
 @app.post("/upload")
 async def upload_file(path: str, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
@@ -142,11 +142,6 @@ async def upload_file(path: str, file: UploadFile, authorization: HTTPAuthorizat
         read += 1024
     opened_file.close()
     return JSONResponse({"msg": "File uploaded successfully", "file_path": path})
-@app.get("/delete_file")
-async def delete_file(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(auth)
-    os.remove(f'uploads/{user["id"]}{file_path}')
-    return JSONResponse({'msg': 'File deleted'})
 
 @app.get("/createfolder")
 async def create_folder(foldername: str,path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
@@ -158,13 +153,19 @@ async def create_folder(foldername: str,path: str,auth: HTTPAuthorizationCredent
 @app.delete("/folder")
 async def delete_folder(folder_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    shutil.rmtree(f'uploads/{user["id"]}/{folder_path}')
+    delete_path = f'uploads/{user["id"]}/{folder_path}'
+    if os.path.islink(delete_path):
+        return JSONResponse({'msg': 'You cannot delete shared folder from here!'},400)
+    shutil.rmtree(delete_path)
     return JSONResponse({'msg': 'Folder deleted'})
 
 @app.delete("/file")
-async def delete_folder(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+async def delete_file(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    os.remove(f'uploads/{user["id"]}{path}')
+    path_to_delete = f'uploads/{user["id"]}{path}'
+    if os.path.islink(path_to_delete):
+        return JSONResponse({'msg': 'You can not delete shared file/folder from here!'},400)
+    os.remove(path_to_delete)
     return JSONResponse({'msg': 'File deleted'})
 
 
@@ -215,26 +216,60 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
 @app.get("/files")
 async def getfiles(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
+    if path == "":
+        path = "/root"
     my_path = f"uploads/{user['id']}"+path
+    if os.path.islink(my_path):
+        my_path = os.readlink(my_path)
     files = os.listdir(my_path)
     result = []
+    isdir = False
     for file in files:
-        isdir = os.path.isdir(my_path+'/'+file)
+        if os.path.islink(my_path+'/'+file):
+            real_path = os.readlink(my_path+'/'+file)
+            isdir = os.path.isdir(real_path)
+        else:
+            isdir = os.path.isdir(my_path+'/'+file)
         obj = {'id': path+'/'+file,'name': file,'isDir': isdir}
         result.append(obj)
     return JSONResponse({'data': result})
 
 @app.get("/sharedfiles")
-async def getfiles(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+async def sharedfiles(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    my_path = f"uploads/{user['id']}"+path
-    files = os.listdir(my_path)
-    result = []
-    for file in files:
-        isdir = os.path.isdir(my_path+'/'+file)
-        obj = {'id': path+'/'+file,'name': file,'isDir': isdir}
+    id = user["id"]
+    cur = conn.cursor()
+    cur.execute(f"select users.id,users.name,filepath,writeBit from shared_files join users on shared_files.sharedBy = users.id and shared_files.sharedTo={id};")
+    records = cur.fetchall()
+
+    for record in  records:
+        id = record[0]
+        path = record[1]
+        obj = {'id': f'/{id}{path}',"name": os.path.basename(path),'isDir': False,'writable': record[2]}
         result.append(obj)
     return JSONResponse({'data': result})
+
+@app.post("/sharedfiles")
+async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    src_id = user["id"]
+    target_email = file.sharedTo
+    cur = conn.cursor()
+    cur.execute("select name,id from users where email=%s",(target_email,))
+    records = cur.fetchall()
+    if len(records) == 0:
+        return JSONResponse({'msg': 'Email does not exist!'},404)
+    dest_id = records[0][1]
+    src_path = f"uploads/{src_id}{file.path}"
+    filename = os.path.basename(file.path)
+    foldername = f"{records[0][0]}({records[0][1]})"
+    dest_path = f"uploads/{dest_id}/root/Shared/{foldername}/{filename}"
+    print(src_path)
+    print(dest_path)
+    os.system(f"mkdir -p 'uploads/{dest_id}/root/Shared/{foldername}'")
+    os.system(f"ln -s '{src_path}' '{dest_path}'")
+    return JSONResponse({'msg': 'ok'})
+
 @app.get("/passwords")
 async def get_passwords(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
