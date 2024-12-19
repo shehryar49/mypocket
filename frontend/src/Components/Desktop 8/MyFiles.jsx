@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { flushSync } from 'react-dom';
 import Sidebar from "../Dashboard/Sidebar/Sidebar";
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -7,6 +8,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import Checkbox from '@mui/material/Checkbox';
 
 import axios from "axios";
 import { toast } from "sonner";
@@ -27,6 +29,9 @@ import {
 import { TbArrowBadgeRight } from "react-icons/tb";
 
 const API_URL = "http://localhost:8000";
+var rid = 0;
+var rootID = 0;
+
 const MyFiles = () => {
 
   const [files,setFiles] = useState([]);
@@ -34,38 +39,53 @@ const MyFiles = () => {
   const [open, setOpen] = React.useState(false);
   const [shareopen, setshareOpen] = React.useState(false);
   const [filesToShare,setFilesToShare] = React.useState([]);
-  useEffect(() => {
+  //const [rootID,setRootID] = React.useState(0);
+  //const [rid,setrid] = React.useState(0); //current resource folder opened
+
+  const getrootid = async () => {
     const token = localStorage.getItem("token");
-    const config = {headers: {Authorization: `Bearer ${token}`},params: {path: '/root'}};
-    axios.get(API_URL+"/files",config).then((response) => {
-      console.log(response.data.data);
-      setFiles(response.data.data);
-      setCurrentPath("/root");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    const response = await axios.get(API_URL+"/rootid",config);
+    return response.data.id;
+  };
+
+  useEffect(() => {
+    
+    getrootid().then((id) => {
+        rid = id;
+        rootID = id;
+        const token = localStorage.getItem("token");
+        const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: id.toString()}};
+        axios.get(API_URL+"/files",config).then((response) => {
+          console.log(response.data.data);
+          setFiles(response.data.data);
+        });
+      
     });
   },[]);
-  const handlePathChange = (e) => {
-    setCurrentPath(e.target.value);
-  };
+
+
   const reloadFiles = () => {
     const token = localStorage.getItem("token");
-    const config = {headers: {Authorization: `Bearer ${token}`},params: {path: currentPath}};
+    const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: rid}};
+    console.log("using rid "+rid.toString()+" to refresh");
     axios.get(API_URL+"/files",config).then((response) => {
       console.log(response.data.data);
       setFiles(response.data.data);
     });
   };
   const uploadFile = () => {
+      flushSync(() => {});
       var upload_btn = document.getElementById('upload-file');
       var files = upload_btn.files;
       if(files.length == 1) {
         var file = files[0];
-        var path = currentPath;
         var formData = new FormData();
         formData.append("file", file);
         const token = localStorage.getItem("token");
         const config = {headers: {Authorization: `Bearer ${token}`},method: "POST",body: formData};
-        var url = new URL(API_URL+"/upload");
-        url.searchParams.append('path', currentPath);
+        var url = new URL(API_URL+"/resource");
+        url.searchParams.append('parentrid', rid);
         fetch(url.toString(), config).then(() => {
           toast.success("File Uploaded");
           reloadFiles();
@@ -73,30 +93,39 @@ const MyFiles = () => {
 
       }
   };
-  const deleteFolder = (path) => {
+  const deleteFolder = (todelete) => {
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`}};
-    var url = new URL(API_URL+"/folder");
-    url.searchParams.append('folder_path',path);
+    var url = new URL(API_URL+"/resource");
+    url.searchParams.append('id',todelete);
     axios.delete(url.toString(),config).then(() => {
       toast.success("Folder deleted");
       reloadFiles();
     });
   }
-  const deleteFile = (path) => {
+  const deleteFile = (todelete) => {
+
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`}};
-    var url = new URL(API_URL+"/file");
-    url.searchParams.append('path',path);
-    axios.delete(url.toString(),config).then(() => {
-      toast.success("File deleted");
-      
+    var url = new URL(API_URL+"/resource");
+    url.searchParams.append('id',todelete);
+    axios.delete(url.toString(),config).then((response) => {
+      if(!response.ok)
+        toast.error(response.data.msg);
+      else
+        toast.success("File deleted");    
       reloadFiles();
-    });
+    }).catch((error) => {
+      toast.error(error.response.data.msg);
+    })
   }
   const sharefiles  = (email) => {
+    /*if(writeable == "on")
+      writeable = true;
+    else
+      writeable = false;
     alert("share files called "+filesToShare.length.toString());
-    if(filesToShare.length > 1) {
+    */if(filesToShare.length > 1) {
       toast.error("Select one file at a time!");
       setFilesToShare([]);
       return;
@@ -108,29 +137,33 @@ const MyFiles = () => {
     }
     const payload = {
       sharedTo: email,
-      path: filesToShare[0].id
+      rid: filesToShare[0].id
     };
+    setFilesToShare([]);  
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},method: "POST",body: JSON.stringify(payload)};
     fetch(API_URL+"/sharedfiles",config).then((response) => {
-      if(response.ok)
-        toast.success("File shared");
-      else
-        toast.error("An error occurred while sharing this file");
-      setFilesToShare([]);
+      
+      return [response.json(),response.status];
+    }).then((result) => {
+      const json = result[0];
+      const status = result[1];
+      if(status != 200) 
+        throw new Error(json.msg);
+      toast.success("Folder/File shared!");
+    }).catch((err) => {
+      toast.error(err.message);
     });
 
   };
   const handleAction = React.useCallback((data) => {
     if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && data.payload.targetFile.isDir) {
         const targetFile = data.payload.targetFile;
-        var path = "/";
-        path = targetFile.id;
         const token = localStorage.getItem("token");
-        const config = {headers: {Authorization: `Bearer ${token}`},params: {path: path}};
+        const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: targetFile.id}};
+        rid = targetFile.id;
         axios.get(API_URL+"/files",config).then((response) => {
-            setFiles(response.data.data);
-            setCurrentPath(targetFile.id);
+              setFiles(response.data.data);
         });
     }
     else if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && !data.payload.targetFile.isDir) {
@@ -145,8 +178,8 @@ const MyFiles = () => {
       setOpen(true);
     }
     else if(data.id == "delete_files") {
-      var todelete = data.state.contextMenuTriggerFile.id;
       var files = data.state.selectedFiles; 
+      flushSync(() => {});
       for(var i = 0; i < files.length; i++) {
         var file = files[i];
         if(file.isDir)
@@ -157,10 +190,16 @@ const MyFiles = () => {
     }
     else if(data.id == "share") {
       var files = data.state.selectedFiles;
-      //var file = files[0].id;
-      //alert("sharing the file" + file);
       setFilesToShare(files);
       setshareOpen(true);
+    }
+    else if(data.id == "refresh") {
+      flushSync(() => {});
+      reloadFiles();
+    }
+    else if(data.id == "home") {
+      rid = rootID;
+      reloadFiles();
     }
   
   }, []);
@@ -170,11 +209,30 @@ const MyFiles = () => {
         name: 'Share',
         toolbar: true,
     },
-} );
+  } );
+  const reloadAction = defineFileAction({
+  id: 'refresh',
+  button: {
+      name: 'Refresh',
+      toolbar: true,
+  },
+  } );
+  const homeAction = defineFileAction({
+    id: 'home',
+    button: {
+        name: 'Home',
+        toolbar: true,
+    },
+    } );
+  
+
+
   const myFileActions = [
     ChonkyActions.UploadFiles,
     ChonkyActions.CreateFolder,
     ChonkyActions.DeleteFiles,
+    reloadAction,
+    homeAction,
     shareFile
   ];
 
@@ -190,12 +248,16 @@ const MyFiles = () => {
   const createFolder = (foldername) => {
     const path = currentPath;
     const token = localStorage.getItem("token");
-    const config = {headers: {Authorization: `Bearer ${token}`},params: {foldername: foldername,path: path}};
+//    alert("creating folder in rid "+rid.toString());
+    if(rid == 0)
+      return;
+    const config = {headers: {Authorization: `Bearer ${token}`},params: {foldername: foldername,parentid: rid}};
     axios.get(API_URL+"/createfolder",config).then(() => {
       toast.success("Folder created");
       reloadFiles();
     });
   };
+
   return (
     <>
     <style>
@@ -288,11 +350,7 @@ const MyFiles = () => {
       </Dialog>
     </React.Fragment>
         <input id="upload-file" type="file" hidden="true" onChange={uploadFile}/>
-        <div className="flex w-full md-4">
-        <input type="text" class="border border-gray-300" placeholder="Path" value={currentPath} onChange={handlePathChange} />
-        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={reloadFiles}>Go</button>
-        </div><br></br>
-<br></br>
+        
         <FileBrowser files={files} onFileAction={handleAction} fileActions={myFileActions}>
             <FileToolbar />
             <FileList />

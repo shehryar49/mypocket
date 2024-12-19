@@ -54,7 +54,7 @@ class Password(BaseModel):
     note: str
 class SharedFile(BaseModel):
     sharedTo: str
-    path: str
+    rid: int
 
 def get_folder_size(folder):
    return sum(file.stat().st_size for file in Path(folder).rglob('*'))
@@ -93,8 +93,7 @@ async def create_user(req: User):
         cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s);", (req.name, req.email, hashed_password))
         cur.execute("SELECT id from users where email=%s",(req.email,))
         id = cur.fetchall()[0][0]
-        os.system(f"mkdir -p uploads/{id}/root")
-
+        cur.execute(f"insert into filesystem(userid,rname,rtype,parentid) VALUES({id},'root',1,-1);")
         token = create_access_token(data={"email": req.email, "name": req.name,"id": id})
         return JSONResponse({"msg": "User created successfully!","access_token": token}, status_code=201)
     except psycopg.errors.StringDataRightTruncation:
@@ -128,76 +127,138 @@ async def changename(name: str,contact: str,auth: HTTPAuthorizationCredentials =
     cur.execute('update users set name = %s where id=%s',(name,int(user["id"])))
     return JSONResponse({},status_code=200)
 
+# Filesystem related stuff
 
+@app.get("/rootid")
+async def getrootid(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select id from filesystem where userid=%s and parentid=-1",(user["id"],))
+    records = cur.fetchall()
+    return JSONResponse({'id': records[0][0]})
 
-@app.post("/upload")
-async def upload_file(path: str, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
+@app.post("/resource")
+async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(authorization)
     read = 0
     total = file.size
-    opened_file = open(f'uploads/{user["id"]}/{path}/{file.filename}',"wb")
+    cur = conn.cursor()
+    cur.execute("select rtype,userid from filesystem where id=%s",(parentrid,))
+    records = cur.fetchall()
+    if len(records) != 1:
+        return JSONResponse({'msg': 'Invalid resource id'},404)
+    if records[0][0] != 1:
+        return JSONResponse({'msg': 'Uploads only supported to a folder!'},400)
+
+    cur.execute(f"insert into filesystem(userid,rname,rtype,parentid) VALUES({user['id']},'{file.filename}',0,{parentrid}) RETURNING id;")
+    records = cur.fetchall()
+    id = records[0][0]
+    upload_path = f"uploads/{id}-{file.filename}"
+    opened_file = open(upload_path,"wb")
     while read < total:
         bytes = await file.read(1024)
         opened_file.write(bytes)
         read += 1024
     opened_file.close()
-    return JSONResponse({"msg": "File uploaded successfully", "file_path": path})
+    return JSONResponse({"msg": "File uploaded successfully", "resource_id": id})
 
 @app.get("/createfolder")
-async def create_folder(foldername: str,path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+async def create_folder(foldername: str,parentid: int,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    os.mkdir(f'uploads/{user["id"]}{path}/{foldername}')
-    return JSONResponse({'msg': 'Folder created'})
+    cur = conn.cursor()
+    cur.execute("insert into filesystem(userid,rname,rtype,parentid) VALUES(%s,%s,1,%s) RETURNING id;",(user["id"],foldername,parentid))
+    records = cur.fetchall()
+    return JSONResponse({'msg': 'Folder created','id': records[0][0]})
 
-
-@app.delete("/folder")
-async def delete_folder(folder_path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+@app.delete("/resource")
+async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    delete_path = f'uploads/{user["id"]}/{folder_path}'
-    if os.path.islink(delete_path):
-        return JSONResponse({'msg': 'You cannot delete shared folder from here!'},400)
-    shutil.rmtree(delete_path)
-    return JSONResponse({'msg': 'Folder deleted'})
+    cur = conn.cursor()
+    cur.execute("select rname,userid,rtype from filesystem where id=%s",(id,))
+    records = cur.fetchall()
+    name = records[0][0]
+    resource_owner = records[0][1]
+    rtype = records[0][2]
 
-@app.delete("/file")
-async def delete_file(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(auth)
-    path_to_delete = f'uploads/{user["id"]}{path}'
-    if os.path.islink(path_to_delete):
-        return JSONResponse({'msg': 'You can not delete shared file/folder from here!'},400)
-    os.remove(path_to_delete)
+    if resource_owner != user["id"]:
+        cur.execute("select id from shared_files where sharedto=%s and resourceid=%s",(user["id"],id))
+        records = cur.fetchall()
+        print(records)
+        if len(records) == 0:     
+            return JSONResponse({'msg': 'You do not have permissions to delete this!'},403)
+        # user is authorized to whatever with this resource
+    cur.execute("delete from filesystem where id=%s",(id,))
+    path = f"uploads/{id}-{name}"
+    if rtype == 0: # file
+        os.remove(path)
+
     return JSONResponse({'msg': 'File deleted'})
 
+@app.get("/files")
+async def getfiles(folderid: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select rtype from filesystem where id=%s",(folderid,))
+    records = cur.fetchall()
+    if len(records) != 1:
+        return JSONResponse({'msg': 'Invalid folder ID'},400)
+    if records[0][0] != 1:
+        return JSONResponse({'msg': 'Resource not a folder. Cannot get it\'s files!'},400)
+    cur.execute("select rname,id,rtype from filesystem where parentid=%s",(folderid,))
+    records = cur.fetchall()
+    
+    result = []
+    isdir = False
+    for record in records:
+        isdir = (record[2] == 1)
+        obj = {'id': record[1],'name': record[0],'isDir': isdir}
+        result.append(obj)
+    # get shared files in current folder
+    cur.execute(f"select rname,filesystem.id,rtype,shared_files.ownername from filesystem join shared_files on filesystem.id = shared_files.resourceid and sharedto = {user["id"]} and parentid={folderid}")
+    records = cur.fetchall()
+    for record in records:
+        isdir = (record[2] == 1)
+        obj = {'id': record[1],'name': f"{record[3]}-{record[1]}-{record[0]}",'isDir': isdir}
+        result.append(obj)
+    # get shared files
+    cur.execute(f"select rname,filesystem.id,rtype,shared_files.ownername from filesystem join shared_files on filesystem.id = shared_files.resourceid and sharedto = {user["id"]}")
+    records = cur.fetchall()
+    for record in records:
+        isdir = (record[2] == 1)
+        obj = {'id': record[1],'name': f"{record[3]}-{record[1]}-{record[0]}",'isDir': isdir}
+        result.append(obj)
+    print(result)
+    return JSONResponse({'data': result})
 
 @app.get("/storage_info")
 async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    my_path = f"uploads/{user['id']}"
-    mp4_videos = glob.glob(my_path + '/**/*.mp4', recursive=True)
-    mkv_videos = glob.glob(my_path + '/**/*.mkv', recursive=True)
-    mp3_files = glob.glob(my_path + '/**/*.mp3', recursive=True)
-    wav_files = glob.glob(my_path + '/**/*.wav', recursive=True)
-    png_files = glob.glob(my_path + '/**/*.png', recursive=True)
-    jpg_files = glob.glob(my_path + '/**/*.jpg', recursive=True)
-    
-    videos = mp4_videos + mkv_videos
-    audios = mp3_files + wav_files
-    images = png_files + jpg_files
-    
-    all_files = glob.glob(my_path + '/**/*.*',recursive = True)
-    size_map = {}
-    prefix_len = len(my_path)
+    cur = conn.cursor()
+    cur.execute("select rname,rtype,id from filesystem where userid=%s",(user["id"]))
+    records = cur.fetchall()
+    videos = 0
+    audios = 0
+    images = 0
+    documents = 0
+    all_files = []
+    for record in records:
+        name = record[0]
+        if name.endswith(".mp4") or name.endswith(".mkv"):
+            videos +=1
+        elif name.endswith(".mp3") or name.endswith(".wav"):
+            audios += 1
+        elif name.endswith(".png") or name.endswith(".jpg"):
+            images += 1
+        elif record[1] != 1:
+            documents += 1
+        if(record[1] != 1):
+            all_files.append(f"uploads/{record[2]}-{name}")
+    total_size = 0    
     for file in all_files:
         st = os.stat(file)
-        size = st.st_size
-        size_map[file[prefix_len+1:]] = size
-    
-    documents = [x[prefix_len+1:] for x in all_files if not (x in videos or x in audios or x in images)]
-    videos = [x[prefix_len+1:] for x in videos]
-    audios = [x[prefix_len+1:] for x in audios]
-    images = [x[prefix_len+1:] for x in images]
-    total_size = get_folder_size(f'uploads/{user["id"]}')
-
+        size = st.st_size / (1024*1024) # size in MBS
+        total_size += size
+ 
     cur = conn.cursor()
     cur.execute(f"select COUNT(*) from passwords where userid={user['id']}")
     records = cur.fetchall()
@@ -208,67 +269,27 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
         'images': images,
         'passwords': count,
         'documents': documents,
-        "size_map": size_map,
         "total_storage": total_size
         }
     return JSONResponse(info)   
 
-@app.get("/files")
-async def getfiles(path: str,auth: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(auth)
-    if path == "":
-        path = "/root"
-    my_path = f"uploads/{user['id']}"+path
-    if os.path.islink(my_path):
-        my_path = os.readlink(my_path)
-    files = os.listdir(my_path)
-    result = []
-    isdir = False
-    for file in files:
-        if os.path.islink(my_path+'/'+file):
-            real_path = os.readlink(my_path+'/'+file)
-            isdir = os.path.isdir(real_path)
-        else:
-            isdir = os.path.isdir(my_path+'/'+file)
-        obj = {'id': path+'/'+file,'name': file,'isDir': isdir}
-        result.append(obj)
-    return JSONResponse({'data': result})
-
-@app.get("/sharedfiles")
-async def sharedfiles(auth: HTTPAuthorizationCredentials = Depends(security)):
-    user = get_current_user(auth)
-    id = user["id"]
-    cur = conn.cursor()
-    cur.execute(f"select users.id,users.name,filepath,writeBit from shared_files join users on shared_files.sharedBy = users.id and shared_files.sharedTo={id};")
-    records = cur.fetchall()
-
-    for record in  records:
-        id = record[0]
-        path = record[1]
-        obj = {'id': f'/{id}{path}',"name": os.path.basename(path),'isDir': False,'writable': record[2]}
-        result.append(obj)
-    return JSONResponse({'data': result})
 
 @app.post("/sharedfiles")
 async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
-    src_id = user["id"]
-    target_email = file.sharedTo
+    sharedby = user["id"]
+    sharedto_email = file.sharedTo
     cur = conn.cursor()
-    cur.execute("select name,id from users where email=%s",(target_email,))
+    cur.execute("select name,id from users where email=%s",(sharedto_email,))
     records = cur.fetchall()
     if len(records) == 0:
         return JSONResponse({'msg': 'Email does not exist!'},404)
-    dest_id = records[0][1]
-    src_path = f"uploads/{src_id}{file.path}"
-    filename = os.path.basename(file.path)
-    foldername = f"{records[0][0]}({records[0][1]})"
-    dest_path = f"uploads/{dest_id}/root/Shared/{foldername}/{filename}"
-    print(src_path)
-    print(dest_path)
-    os.system(f"mkdir -p 'uploads/{dest_id}/root/Shared/{foldername}'")
-    os.system(f"ln -s '{src_path}' '{dest_path}'")
+    sharedto = records[0][1]
+    ownername = user["name"]
+    cur.execute(f"insert into shared_files(sharedby,ownername,sharedto,resourceid) VALUES({sharedby},'{ownername}',{sharedto},{file.rid})")
     return JSONResponse({'msg': 'ok'})
+
+# Saved passwords
 
 @app.get("/passwords")
 async def get_passwords(auth: HTTPAuthorizationCredentials = Depends(security)):
