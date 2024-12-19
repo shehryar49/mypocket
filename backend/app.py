@@ -179,13 +179,13 @@ async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(s
     name = records[0][0]
     resource_owner = records[0][1]
     rtype = records[0][2]
-
-    if resource_owner != user["id"]:
-        cur.execute("select id from shared_files where sharedto=%s and resourceid=%s",(user["id"],id))
-        records = cur.fetchall()
-        print(records)
-        if len(records) == 0:     
-            return JSONResponse({'msg': 'You do not have permissions to delete this!'},403)
+    # the user has resource id that means he has access, no need to do the following
+    #if resource_owner != user["id"]:
+    #    cur.execute("select id from shared_files where sharedto=%s and resourceid=%s",(user["id"],id))
+    #    records = cur.fetchall()
+    #    print(records)
+    #    if len(records) == 0:     
+    #        return JSONResponse({'msg': 'You do not have permissions to delete this!'},403)
         # user is authorized to whatever with this resource
     cur.execute("delete from filesystem where id=%s",(id,))
     path = f"uploads/{id}-{name}"

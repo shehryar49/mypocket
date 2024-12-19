@@ -110,10 +110,7 @@ const MyFiles = () => {
     var url = new URL(API_URL+"/resource");
     url.searchParams.append('id',todelete);
     axios.delete(url.toString(),config).then((response) => {
-      if(!response.ok)
-        toast.error(response.data.msg);
-      else
-        toast.success("File deleted");    
+      toast.success("File deleted");    
       reloadFiles();
     }).catch((error) => {
       toast.error(error.response.data.msg);
