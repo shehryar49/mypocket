@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { flushSync } from 'react-dom';
 import Sidebar from "../Dashboard/Sidebar/Sidebar";
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import Checkbox from '@mui/material/Checkbox';
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TextField,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import axios from "axios";
 import { toast } from "sonner";
@@ -31,7 +36,7 @@ import { TbArrowBadgeRight } from "react-icons/tb";
 const API_URL = "http://localhost:8000";
 var rid = 0;
 var rootID = 0;
-
+var tmp = 0;
 const MyFiles = () => {
 
   const [files,setFiles] = useState([]);
@@ -39,8 +44,7 @@ const MyFiles = () => {
   const [open, setOpen] = React.useState(false);
   const [shareopen, setshareOpen] = React.useState(false);
   const [filesToShare,setFilesToShare] = React.useState([]);
-  //const [rootID,setRootID] = React.useState(0);
-  //const [rid,setrid] = React.useState(0); //current resource folder opened
+  const [emails, setEmails] = useState(["test1@example.com", "test2@example.com","test1@example.com", "test2@example.com"]);
 
   const getrootid = async () => {
     const token = localStorage.getItem("token");
@@ -187,8 +191,20 @@ const MyFiles = () => {
     }
     else if(data.id == "share") {
       var files = data.state.selectedFiles;
+      const token = localStorage.getItem("token");
+      if(files.length != 1) {
+        alert("Select one file/folder to share!");
+        return;
+      }
+      var id = files[0].id;
+      const config = {headers: {Authorization: `Bearer ${token}`},params: {id: id}};
+      axios.get(API_URL+"/acl",config).then((res) => {
+        setEmails(res.data.emails);
+        tmp = res.data;
+      });
       setFilesToShare(files);
       setshareOpen(true);
+
     }
     else if(data.id == "refresh") {
       flushSync(() => {});
@@ -302,6 +318,20 @@ const MyFiles = () => {
             fullWidth
             variant="standard"
           />
+          <List>
+          {emails.map((email, index) => (
+            <ListItem
+              key={index}
+              secondaryAction={
+                <IconButton edge="end" onClick={() => console.log(email)}>
+                  <DeleteIcon />
+                </IconButton>
+              }
+            >
+              <ListItemText primary={email} />
+            </ListItem>
+          ))}
+        </List>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleShareClose}>Cancel</Button>

@@ -34,7 +34,7 @@ const SignIn = () => {
       const { access_token} = response.data; // Get only the access token
       
       // Store the token and authenticate the user
-      login(access_token,{'name': response.data.name,'email': response.data.email,'id': response.data.id}); 
+      login(access_token,{'name': response.data.name,'email': response.data.email,'id': response.data.id,'active_sessions': response.data['active_sessions']}); 
   
       navigate("/dashboard");
     } catch (error) {

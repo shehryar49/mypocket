@@ -14,7 +14,8 @@ const AuthProvider = ({ children }) => {
   const [ipAddress, setIpAddress] = useState("");
   const [loginDevice, setLoginDevice] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeSessions, setActiveSessions] = useState([]);
+  const [activeSessions, setActiveSessions] = useState(0);
+  const [twoFactor, setTwoFactor] = useState(false);
   const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
   // Logout function to clear state and localStorage
   const logout = async () => {
@@ -22,7 +23,7 @@ const AuthProvider = ({ children }) => {
       localStorage.removeItem("user");
       setIsAuthenticated(false);
       setUser({});
-      setActiveSessions([]);
+      setActiveSessions(0);
       setLoginTime(null);
       setIpAddress("");
       setLoginDevice("");
@@ -37,6 +38,9 @@ const AuthProvider = ({ children }) => {
       localStorage.setItem("token", token);
       setIsAuthenticated(true);
       setUser(user);
+      console.log(user);
+      setActiveSessions(user['active_sessions']);
+      console.log(user['active_sessions']);
       setImageUrl(API_URL+`/profile_pic?id=${user.id}&r=1234`);
       toast.success("You're now signed in.");
     } catch (error) {
@@ -79,6 +83,8 @@ const AuthProvider = ({ children }) => {
         imageUrl,
         setUser,
         setImageUrl,
+        twoFactor,
+        setTwoFactor,
         loginTime,
         ipAddress,
         loginDevice,

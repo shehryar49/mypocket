@@ -109,9 +109,25 @@ async def login(req: Cred):
     if not records or not verify_password(req.password, records[0][0]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     token = create_access_token(data={"email": req.email, "name": records[0][1],"id": records[0][2]})
-    return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email,'id': records[0][2]})
+    cur.execute(f"UPDATE users set active_sessions=active_sessions+1 where email='{req.email}' RETURNING active_sessions")
+    tmp = cur.fetchall()[0][0]
+    return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email,'id': records[0][2],'active_sessions': tmp})
 
 # Secure endpoints
+@app.get("/logout")
+async def logout(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    email = user["email"]
+    cur.execute(f"UPDATE users set active_sessions=active_sessions-1 where email='{email}'")
+    return JSONResponse({},200)
+
+@app.get("/toggle2FA")
+async def toggle2FA(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("update users set tfa = not tfa where email=%s",(user["email"],))
+    return JSONResponse({})
+
 @app.post("/changepassword")
 async def changepassword(req: Cred, auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
@@ -288,6 +304,14 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     ownername = user["name"]
     cur.execute(f"insert into shared_files(sharedby,ownername,sharedto,resourceid) VALUES({sharedby},'{ownername}',{sharedto},{file.rid})")
     return JSONResponse({'msg': 'ok'})
+
+@app.get("/acl")
+async def getacl(id: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select email from(select * from shared_files join users on shared_files.sharedto=users.id) where resourceid=%s;",(id,))
+    records = cur.fetchall()
+    return JSONResponse({'emails': records},200)
 
 # Saved passwords
 

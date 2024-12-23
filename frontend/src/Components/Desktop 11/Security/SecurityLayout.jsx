@@ -37,13 +37,13 @@ const SecurityLayout = ({
           </div>
         </div>
 
-        {/* Last Sign In */}
+        {/* Last Sign In 
         <div className="flex gap-1 flex-col mb-3">
           <h1 className="ml-2 font-medium dark:text-gray-200">Last sign in</h1>
           <p className="ml-2 font-normal text-gray-500 text-sm dark:text-gray-300">
             Today at {loginTime}, {loginDevice} {ipAddress}
           </p>
-        </div>
+        </div>*/}
 
         {/* Active Sessions */}
         <div className="flex gap-1 flex-col">
@@ -51,7 +51,7 @@ const SecurityLayout = ({
             Active Sessions
           </h1>
           <p className="ml-2 font-normal text-gray-500 text-sm dark:text-gray-300">
-            Total active sessions ({activeSessions.length})
+            Total active sessions ({activeSessions})
           </p>
         </div>
 

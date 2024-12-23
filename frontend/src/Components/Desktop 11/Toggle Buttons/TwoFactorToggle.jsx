@@ -1,12 +1,29 @@
 import React, { useContext } from "react";
 import { AuthContext } from "../../Context/AuthContext";
+import { toast } from "sonner";
+import axios from 'axios';
+
+const API_URL = "http://localhost:8000";
 
 const TwoFactorToggle = () => {
+  const toggle2FA = () => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/toggle2FA",config).then((response)=>{
+      if(!twoFactor)
+        toast.success("Two factor authentication enabled.");
+      else
+        toast.success("Two factor authentication disabled.");
+      setTwoFactor(!twoFactor);
+    }).catch((err) => {
+      toast.error(err.message);
+    });
+  };
   const { twoFactor, setTwoFactor } = useContext(AuthContext);
   return (
     <div className="flex items-center justify-center mt-4">
       <button
-        onClick={() => setTwoFactor(!twoFactor)}
+        onClick={toggle2FA}
         className={`rounded-full w-[50px] h-6 transition-colors shadow-md duration-300 relative flex items-center ${
           twoFactor ? "bg-blue-600 dark:bg-blue-700" : "bg-gray-400"
         }`}
