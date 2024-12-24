@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import validator from "validator";
 import UserInfoLayout from "./UserInfoLayout";
+import axios from 'axios';
+import {toast} from 'sonner';
+
+const API_URL = "http://localhost:8000";
 
 const UserInfo = ({ handleShowOtp }) => {
   const [email, setEmail] = useState("");
@@ -22,7 +26,16 @@ const UserInfo = ({ handleShowOtp }) => {
  */
   const handleOtp = () => {
     if (isValid) {
-      handleShowOtp();
+      const config = {params: {'email': email}};
+
+      axios.get(API_URL+"/forgotpassword",config).then((response) => {
+        if('msg' in response.data)
+          throw new Error(response.data.msg);
+        toast.success("An email was to your account!");
+
+      }).catch((error) => {
+        toast.error(error.message);
+      })
     }
   };
 

@@ -1,9 +1,37 @@
-import React from "react";
+import {React,useContext} from "react";
 import ConfirmationButtons from "./ConfirmationButtons";
+import { useNavigate } from "react-router-dom";
+import {AuthContext} from '../Context/AuthContext';
+import {toast} from "sonner";
 
-const OTP = ({ otp, inputRef, handleInput, handleCancel }) => {
-  const handleChange = (i, e) => {
+const API_URL = "http://localhost:8000";
+
+const OTP = () => {
+  const navigate = useNavigate();
+  const { login,tmp,setTmp } = useContext(AuthContext);
+  const handleChange = (e) => {
     // Dummy function for input field
+    console.log(tmp);
+    if(e.target.value.length == 4) {
+      const payload = {email: tmp.email,password: tmp.password,otp: parseInt(e.target.value)};
+      const token = localStorage.getItem('token');
+      const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},"body": JSON.stringify(payload),method: "POST"};
+      fetch(API_URL+"/otpsignin",config).then((response) => {
+        return response.json();
+      }).then((response) => {
+        if('msg' in  response)
+          throw new Error(response.msg);
+        const access_token = response.access_token;
+        login(access_token,{'name': response.name,'email': response.email,'id': response.id,'active_sessions': response['active_sessions']}); 
+        navigate("/dashboard");
+      }).catch((err) => {
+        toast.error(err.message);
+        navigate("/signin");
+      });
+    }
+  };
+  const handleCancel = () => {
+    navigate("/signin");
   };
   return (
     <>
@@ -35,19 +63,14 @@ const OTP = ({ otp, inputRef, handleInput, handleCancel }) => {
 
             {/* Input fields for OTP */}
             <div className="flex gap-8 mt-2 mb-2">
-              {otp.map((value, index) => (
+              {/*otp.map((value, index) => (*/}
                 <input
-                  key={index}
                   type="text"
-                  name={index}
-                  ref={inputRef[index]}
-                  value={value}
-                  onChange={(e) => handleChange(i, e)}
-                  onKeyDown={(e) => handleInput(index, e.key)}
+                  onChange={(e) => handleChange(e)}
                   className="w-12 h-20 focus:bg-blue-100 text-center border bg-gray-100 border-gray-200 rounded-md shadow-md text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:focus:bg-gray-700 dark:placeholder:text-gray-400 dark:border-gray-600 dark:text-gray-200 dark:focus:border-blue-400 transition-all"
-                  maxLength="1"
+                  maxLength="4"
                 />
-              ))}
+              {/*))}*/}
             </div>
 
             {/* Confirmation Buttons */}

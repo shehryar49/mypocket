@@ -157,6 +157,27 @@ const MyFiles = () => {
     });
 
   };
+  const downloadFile = (id) => {
+    const token = localStorage.getItem("token");
+    var url = new URL(API_URL+"/decrypted_resource");
+    url.searchParams.append("token",token);
+    url.searchParams.append("rid",id);
+    window.open(url.toString());
+  
+  };
+  const checkDecryption = (id) => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/decryption_status",config).then((res) => {
+      var done = response.data.done;
+      if(!done)
+        setTimeout(function (){ checkDecryption(id); },5000);
+      else
+      {
+        downloadFile(id);
+      }  
+    });
+  };
   const handleAction = React.useCallback((data) => {
     if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && data.payload.targetFile.isDir) {
         const targetFile = data.payload.targetFile;
@@ -169,7 +190,16 @@ const MyFiles = () => {
     }
     else if(data.id == "open_files" && data.payload.files.length == 1 && ('targetFile' in data.payload) && !data.payload.targetFile.isDir) {
       const targetFile = data.payload.targetFile;
-      toast.success("Your file is being decrypted. Download will begin automatically.");
+      const token = localStorage.getItem("token");
+      const id = targetFile.id;
+      const config = {headers: {Authorization: `Bearer ${token}`},params: {'rid': id}};
+      axios.get(API_URL+"/decrypt",config).then((response) => {
+        toast.success("Your file is being decrypted. Download will begin automatically.");
+        setTimeout(function (){ downloadFile(id); },5000);
+      }).catch((err) => {
+        toast.error(err.message);
+      });
+
     }
     else if(data.id == "upload_files") {
       var upload_btn = document.getElementById('upload-file');
@@ -270,6 +300,20 @@ const MyFiles = () => {
       reloadFiles();
     });
   };
+  const removeSharedAccess = (index) => {
+    const token = localStorage.getItem("token");
+    const id = filesToShare[0].id;
+    const email = emails[index];
+    const config = {headers: {Authorization: `Bearer ${token}`},'method': 'DELETE'};
+    var url = new URL(API_URL+"/sharedfiles");
+    url.searchParams.append("email",email);
+    url.searchParams.append("id",id);
+    fetch(url.toString(),config).then((response) => response.json()).then((response) =>{
+      setEmails(emails.filter(e => email !== e));
+    }).catch((error) => {
+      console.log(error.message);
+    });
+  };
 
   return (
     <>
@@ -323,7 +367,7 @@ const MyFiles = () => {
             <ListItem
               key={index}
               secondaryAction={
-                <IconButton edge="end" onClick={() => console.log(email)}>
+                <IconButton edge="end" onClick={() => removeSharedAccess(index)}>
                   <DeleteIcon />
                 </IconButton>
               }

@@ -9,3 +9,5 @@ backend/*.cfg
 backend/__pycache__
 backend/uploads
 backend/profile_pictures
+backend/decrypted
+backend/king

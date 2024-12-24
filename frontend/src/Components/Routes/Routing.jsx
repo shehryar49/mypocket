@@ -14,6 +14,7 @@ import SharedFiles from "../Desktop 10/SharedFiles";
 import Settings from "../Desktop 11/Settings";
 import Upload from "../Desktop 12/Upload";
 import ErrorPage from "./ErrorPage";
+import OTP from "../Desktop 5/OTP";
 
 const Routing = () => {
   return (
@@ -23,6 +24,7 @@ const Routing = () => {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgotpassword" element={<ForgotPassword />} />
+      <Route path="/otp" element={<OTP />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/dashboard/myprofile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
       <Route path="/dashboard/mystorage" element={<ProtectedRoute><MyStorage /></ProtectedRoute>} />
@@ -31,6 +33,7 @@ const Routing = () => {
       <Route path="/dashboard/sharedfiles" element={<ProtectedRoute><SharedFiles /></ProtectedRoute>} />
       <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/dashboard/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+      
     </Routes>
   );
 };

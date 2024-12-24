@@ -7,3 +7,10 @@ create table notifications(id SERIAL PRIMARY KEY,msg VARCHAR(100));
 create table filesystem(id SERIAL PRIMARY KEY,userid int,rname VARCHAR(255),rtype int,parentid int);
 
 create table shared_files(id SERIAL PRIMARY KEY,sharedBy int,ownername VARCHAR(50),sharedTo int,resourceid int);
+
+create table otp(userid INT NOT NULL,code int);
+
+create table encrypting(id INT NOT NULL,name VARCHAR(255),done boolean);
+create table decrypting(id INT NOT NULL,name VARCHAR(255),done boolean);
+
+create table encryption_keys(id INT NOT NULL,X int,Y int,n0 int,sum NUMERIC);

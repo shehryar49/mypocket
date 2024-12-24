@@ -33,11 +33,11 @@ const MyStorage = () => {
     axios.get(API_URL+"/storage_info",config).then((response) => {
       const json = response.data;
       dummyData['filesStorage'][0]['count'] = json['passwords'];
-      dummyData['filesStorage'][1]['count'] = json['videos'].length;
-      dummyData['filesStorage'][4]['count'] = json['audios'].length;
-      dummyData['filesStorage'][3]['count'] = json['images'].length;
-      dummyData['filesStorage'][2]['count'] = json['documents'].length;
-      dummyData.usedStorage = (((json['total_storage']/1024)/1024)/1024).toFixed(4);
+      dummyData['filesStorage'][1]['count'] = json['videos'];
+      dummyData['filesStorage'][4]['count'] = json['audios'];
+      dummyData['filesStorage'][3]['count'] = json['images'];
+      dummyData['filesStorage'][2]['count'] = json['documents'];
+      dummyData.usedStorage = (json['total_storage']/1024).toFixed(4);
       dummyData.availableStorage = dummyData.totalStorage - dummyData.usedStorage;
       setStorageData(dummyData);
       

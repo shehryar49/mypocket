@@ -1,18 +1,19 @@
 import React, { useContext, useState, useEffect } from "react";
 import validator from "validator";
 import UserInfoLayout from "./SignInUserInfoLayout";
-import { AuthContext } from "../Context/AuthContext";
+import { AuthContext} from "../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 
+var tmp = 0;
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isValid, setIsValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const { login, isAuthenticated } = useContext(AuthContext);
+  const { login, isAuthenticated,setTmp } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,11 +33,16 @@ const SignIn = () => {
         password,
       });  
       const { access_token} = response.data; // Get only the access token
-      
-      // Store the token and authenticate the user
-      login(access_token,{'name': response.data.name,'email': response.data.email,'id': response.data.id,'active_sessions': response.data['active_sessions']}); 
-  
-      navigate("/dashboard");
+      if('otp' in response.data) {
+        //OTP signin required
+//        alert(JSON.stringify(response.data));
+        setTmp(response.data);
+        navigate("/otp");
+      }else {
+        // Store the token and authenticate the user
+        login(access_token,{'name': response.data.name,'email': response.data.email,'id': response.data.id,'active_sessions': response.data['active_sessions']}); 
+        navigate("/dashboard");
+      }
     } catch (error) {
       setErrorMessage("Invalid Email or password, please try again.");
     }

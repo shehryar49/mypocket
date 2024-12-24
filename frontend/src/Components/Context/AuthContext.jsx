@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
+import axios from 'axios';
 
 // The AuthContext to manage authentication and user data
 export const AuthContext = createContext();
@@ -17,9 +18,13 @@ const AuthProvider = ({ children }) => {
   const [activeSessions, setActiveSessions] = useState(0);
   const [twoFactor, setTwoFactor] = useState(false);
   const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
+  const [tmp,setTmp] = useState();
   // Logout function to clear state and localStorage
   const logout = async () => {
     try {
+      const token = localStorage.getItem("token");
+      const config = {headers: {Authorization: `Bearer ${token}`}};
+      const response = await axios.get(API_URL+"/logout",config);
       localStorage.removeItem("user");
       setIsAuthenticated(false);
       setUser({});
@@ -29,6 +34,7 @@ const AuthProvider = ({ children }) => {
       setLoginDevice("");
       toast.success("Logged out successfully.");
     } catch (error) {
+      alert(error.message);
       toast.error("Logout failed. Please try again.");
     }
   };
@@ -90,6 +96,8 @@ const AuthProvider = ({ children }) => {
         loginDevice,
         activeSessions,
         isAuthenticated,
+        tmp,
+        setTmp,
         login,
         logout,
         signup,  // Expose signUp to the context

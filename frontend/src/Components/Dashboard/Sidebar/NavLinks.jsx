@@ -72,7 +72,7 @@ const NavLinks = () => {
             <RiLockPasswordFill className="text-lg" /> My Passwords
           </NavLink>
         </li>
-        <li>
+        {/*<li>
           <NavLink
             to="/dashboard/sharedfiles"
             className={({ isActive }) =>
@@ -83,7 +83,7 @@ const NavLinks = () => {
           >
             <RiFolderSharedFill className="text-lg" /> Shared Files
           </NavLink>
-        </li>
+        </li>*/}
         <li>
           {" "}
           <NavLink

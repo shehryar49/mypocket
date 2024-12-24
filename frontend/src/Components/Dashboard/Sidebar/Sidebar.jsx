@@ -74,11 +74,11 @@ const Sidebar = () => {
 
           {/* Upload Button */}
           <div className="md:mr-5 flex md:gap-4 justify-center items-center w-full mt-3 md:mt-1 2xl:mt-6">
-            <div>
+            {/*<div>
               <NavLink to="/dashboard/upload" className="flex justify-start">
                 <UploadButton />
               </NavLink>
-            </div>
+            </div>*/}
 
             {/* Logout button for med screens */}
             <div className=" hidden md:block">

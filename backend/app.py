@@ -12,6 +12,8 @@ import psycopg
 import base64
 import shutil
 import glob
+import random
+import subprocess
 
 # Initialize app and security context
 app = FastAPI()
@@ -55,10 +57,19 @@ class Password(BaseModel):
 class SharedFile(BaseModel):
     sharedTo: str
     rid: int
+class OTPCred(BaseModel):
+    email: str
+    password: str
+    otp: int
 
 def get_folder_size(folder):
    return sum(file.stat().st_size for file in Path(folder).rglob('*'))
-
+def fork_proc(command):
+    pid = os.fork()
+    if pid == 0:
+        os.system(command)
+        exit()
+    return 0
 def get_current_user(authorization: HTTPAuthorizationCredentials = Depends(security)):
     token = authorization.credentials
     try:
@@ -104,8 +115,31 @@ async def create_user(req: User):
 @app.post("/login")
 async def login(req: Cred):
     cur = conn.cursor()
-    cur.execute("SELECT password, name, id FROM users WHERE email = %s", (req.email,))
+    cur.execute("SELECT password, name, id, tfa FROM users WHERE email = %s", (req.email,))
     records = cur.fetchall()
+    if not records or not verify_password(req.password, records[0][0]):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    if records[0][3]: # 2FA enabled
+        # generate otp and mail it
+        otp = random.randint(1000,9999)
+        p = subprocess.Popen(['python','sendmail.py',req.email,str(otp)])
+        cur.execute("insert into otp(userid,code) VALUES(%s,%s)",(records[0][2],otp))
+        return  JSONResponse({"email": req.email,"password": req.password,"otp": True})
+    token = create_access_token(data={"email": req.email, "name": records[0][1],"id": records[0][2]})
+    cur.execute(f"UPDATE users set active_sessions=active_sessions+1 where email='{req.email}' RETURNING active_sessions")
+    tmp = cur.fetchall()[0][0]
+    return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email,'id': records[0][2],'active_sessions': tmp})
+
+@app.post("/otpsignin")
+async def otpsignin(req: OTPCred):
+    cur = conn.cursor()
+    cur.execute("SELECT password, name, id, tfa FROM users WHERE email = %s", (req.email,))
+    records = cur.fetchall()
+    cur.execute("select code from otp where userid=%s",(records[0][2],))
+    otp = cur.fetchall()[0][0]
+    cur.execute("delete from otp where userid=%s",(records[0][2],))
+    if otp != req.otp:
+        return JSONResponse({'msg': "Incorrect OTP headback to login page"},401)
     if not records or not verify_password(req.password, records[0][0]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     token = create_access_token(data={"email": req.email, "name": records[0][1],"id": records[0][2]})
@@ -113,12 +147,27 @@ async def login(req: Cred):
     tmp = cur.fetchall()[0][0]
     return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email,'id': records[0][2],'active_sessions': tmp})
 
+@app.get("/forgotpassword")
+async def forgotpassword(email: str):
+    cur = conn.cursor()
+    cur.execute("select id from users where email=%s",(email,))
+    records = cur.fetchall()
+    print(records)
+    if len(records) != 1:
+        return JSONResponse({'msg': 'Email address not found!'},404)
+    # generate a random otp like password
+    password = random.randint(100000,999999)
+    cur.execute("update users set password=%s where email=%s",(hash_password(str(password)),email))
+    os.system(f"python sendpassword.py {email} {password}")
+    return JSONResponse({},200)
+
 # Secure endpoints
 @app.get("/logout")
 async def logout(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     email = user["email"]
-    cur.execute(f"UPDATE users set active_sessions=active_sessions-1 where email='{email}'")
+    cur = conn.cursor()
+    cur.execute("UPDATE users set active_sessions=active_sessions-1 where email=%s",(email,))
     return JSONResponse({},200)
 
 @app.get("/toggle2FA")
@@ -170,12 +219,20 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
     records = cur.fetchall()
     id = records[0][0]
     upload_path = f"uploads/{id}-{file.filename}"
-    opened_file = open(upload_path,"wb")
+    opened_file = open(f"uploads/tmp-{id}.bin","wb")
     while read < total:
         bytes = await file.read(1024)
         opened_file.write(bytes)
         read += 1024
     opened_file.close()
+    if file.filename.endswith(".avi"):
+        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.avi && ./king {id} evideo uploads/tmp-{id}.avi {upload_path} 3 3 550 0"
+    elif file.filename.endswith(".png"):
+        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png {upload_path} 3 3 550 0"
+    else:
+        command = f"openssl enc -aes-256-cbc -salt -in uploads/tmp-{id}.bin -out {upload_path} -pass pass:mypocket"
+    os.system(command)
+    #fork_proc(command)
     return JSONResponse({"msg": "File uploaded successfully", "resource_id": id})
 
 @app.get("/createfolder")
@@ -204,10 +261,12 @@ async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(s
     #        return JSONResponse({'msg': 'You do not have permissions to delete this!'},403)
         # user is authorized to whatever with this resource
     cur.execute("delete from filesystem where id=%s",(id,))
+    cur.execute("delete from shared_files where resourceid=%s",(id,))
+    cur.execute("delete from encryption_keys where id=%s",(id,))
+
     path = f"uploads/{id}-{name}"
     if rtype == 0: # file
         os.remove(path)
-
     return JSONResponse({'msg': 'File deleted'})
 
 @app.get("/files")
@@ -250,7 +309,7 @@ async def getfiles(folderid: str,auth: HTTPAuthorizationCredentials = Depends(se
 async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     cur = conn.cursor()
-    cur.execute("select rname,rtype,id from filesystem where userid=%s",(user["id"]))
+    cur.execute("select rname,rtype,id from filesystem where userid=%s",(user["id"],))
     records = cur.fetchall()
     videos = 0
     audios = 0
@@ -259,7 +318,7 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
     all_files = []
     for record in records:
         name = record[0]
-        if name.endswith(".mp4") or name.endswith(".mkv"):
+        if name.endswith(".mp4") or name.endswith(".mkv") or name.endswith(".avi"):
             videos +=1
         elif name.endswith(".mp3") or name.endswith(".wav"):
             audios += 1
@@ -289,6 +348,54 @@ async def storage_info(auth: HTTPAuthorizationCredentials = Depends(security)):
         }
     return JSONResponse(info)   
 
+@app.get("/decrypt")
+async def begin_decryption(rid: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select rname from filesystem where id=%s",(rid,))
+    name = cur.fetchall()[0][0]
+    path = f"uploads/{rid}-{name}"
+    cur.execute("select X,Y,n0,sum from encryption_keys where id=%s",(rid,))
+    if name.endswith(".avi"): # video
+        key = cur.fetchall()[0]
+        command = f"./king 0 dvideo {path} decrypted/{name} {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} {name}"
+    elif name.endswith(".png"): # image
+        key = cur.fetchall()[0]
+        command = f"./king 0 dimg {path} decrypted/{name} {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} {name}"
+    else:
+        command = f"openssl enc -aes-256-cbc -d -salt -in {path} -out decrypted/{name} -pass pass:mypocket && python decryption-done.py {rid} {name}"
+    os.system(command)
+    return JSONResponse({'msg': 'Started'},200)
+
+@app.get("/decrypted_status")
+async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(user)
+    cur = conn.cursor()
+    cur.execute("select done,name from decrypting where rid=%s",(rid,))
+    records = cur.fetchall()
+    return JSONResponse({'done': False})    
+    done = records[0][0]
+    return JSONResponse({'done': done})
+
+@app.get("/decrypted_resource")
+async def get_file(rid: str, token: str):
+    user=None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user = payload
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    cur = conn.cursor()
+    cur.execute("select done,name from decrypting where id=%s",(rid,))
+    records = cur.fetchall()
+    if len(records)==0:
+        return JSONResponse({'msg': 'try later'},404)
+    done = records[0][0]
+    name = records[0][1]
+    if not done:
+        return JSONResponse({'msg': 'try later'},404)
+    cur.execute("delete from decrypting where id=%s",(rid,))
+    return FileResponse(f'decrypted/{name}')
 
 @app.post("/sharedfiles")
 async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
@@ -304,6 +411,18 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     ownername = user["name"]
     cur.execute(f"insert into shared_files(sharedby,ownername,sharedto,resourceid) VALUES({sharedby},'{ownername}',{sharedto},{file.rid})")
     return JSONResponse({'msg': 'ok'})
+
+@app.delete("/sharedfiles")
+async def delete_shared_file(id: str,email: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    sharedby = user["id"]
+    sharedto_email = email
+    cur = conn.cursor()
+    cur.execute("select id from users where email=%s",(email,))
+    records = cur.fetchall()
+    sharedto = records[0][0]
+    cur.execute("delete from shared_files where resourceid=%s and sharedto=%s and sharedby=%s",(id,sharedto,sharedby))
+    return JSONResponse({},200)
 
 @app.get("/acl")
 async def getacl(id: str,auth: HTTPAuthorizationCredentials = Depends(security)):
@@ -351,6 +470,8 @@ async def delete_password(id: int,auth: HTTPAuthorizationCredentials = Depends(s
 @app.get("/profile_pic")
 async def profile_pic(id: str,r: str):
     #r is some random nonsense to avoid cache
+    if not os.path.isfile(f'profile_pictures/{id}.jpg'):
+        return FileResponse("profile_pictures/default.jpg")
     return FileResponse(f'profile_pictures/{id}.jpg')
 
 @app.post("/profile_pic")
