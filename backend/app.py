@@ -226,11 +226,11 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
         read += 1024
     opened_file.close()
     if file.filename.endswith(".avi"):
-        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.avi && ./king {id} evideo uploads/tmp-{id}.avi {upload_path} 3 3 550 0"
+        command = f"mv 'uploads/tmp-{id}.bin' 'uploads/tmp-{id}.avi' && ./king {id} evideo 'uploads/tmp-{id}.avi' '{upload_path}' 3 3 550 0"
     elif file.filename.endswith(".png"):
-        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png {upload_path} 3 3 550 0"
+        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png '{upload_path}' 3 3 550 0"
     else:
-        command = f"openssl enc -aes-256-cbc -salt -in uploads/tmp-{id}.bin -out {upload_path} -pass pass:mypocket"
+        command = f"openssl enc -aes-256-cbc -salt -in 'uploads/tmp-{id}.bin' -out '{upload_path}' -pass pass:mypocket"
     os.system(command)
     #fork_proc(command)
     return JSONResponse({"msg": "File uploaded successfully", "resource_id": id})
@@ -358,12 +358,12 @@ async def begin_decryption(rid: str,auth: HTTPAuthorizationCredentials = Depends
     cur.execute("select X,Y,n0,sum from encryption_keys where id=%s",(rid,))
     if name.endswith(".avi"): # video
         key = cur.fetchall()[0]
-        command = f"./king 0 dvideo {path} decrypted/{name} {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} {name}"
+        command = f"./king 0 dvideo '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
     elif name.endswith(".png"): # image
         key = cur.fetchall()[0]
-        command = f"./king 0 dimg {path} decrypted/{name} {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} {name}"
+        command = f"./king 0 dimg '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
     else:
-        command = f"openssl enc -aes-256-cbc -d -salt -in {path} -out decrypted/{name} -pass pass:mypocket && python decryption-done.py {rid} {name}"
+        command = f"openssl enc -aes-256-cbc -d -salt -in '{path}' -out 'decrypted/{name}' -pass pass:mypocket && python decryption-done.py {rid} '{name}'"
     os.system(command)
     return JSONResponse({'msg': 'Started'},200)
 
@@ -379,6 +379,7 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
 
 @app.get("/decrypted_resource")
 async def get_file(rid: str, token: str):
+    
     user=None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -395,7 +396,10 @@ async def get_file(rid: str, token: str):
     if not done:
         return JSONResponse({'msg': 'try later'},404)
     cur.execute("delete from decrypting where id=%s",(rid,))
-    return FileResponse(f'decrypted/{name}')
+    file_path = f"decrypted/{name}"
+    print("!!!!!!!!!!!!!!!HERE!!!!!!!!!!!!!!!!!!")
+    print(file_path)
+    return FileResponse(file_path)
 
 @app.post("/sharedfiles")
 async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
