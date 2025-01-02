@@ -35,7 +35,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # JWT settings
 SECRET_KEY = os.getenv("SECRET_KEY", "mypocket")  # Use environment variables for sensitive info
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 300
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Database connection setup
 conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
@@ -225,9 +225,7 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
         opened_file.write(bytes)
         read += 1024
     opened_file.close()
-    if file.filename.endswith(".avi"):
-        command = f"mv 'uploads/tmp-{id}.bin' 'uploads/tmp-{id}.avi' && ./king {id} evideo 'uploads/tmp-{id}.avi' '{upload_path}' 3 3 550 0"
-    elif file.filename.endswith(".png"):
+    if file.filename.endswith(".png"):
         command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png '{upload_path}' 3 3 550 0"
     else:
         command = f"openssl enc -aes-256-cbc -salt -in 'uploads/tmp-{id}.bin' -out '{upload_path}' -pass pass:mypocket"
@@ -356,10 +354,7 @@ async def begin_decryption(rid: str,auth: HTTPAuthorizationCredentials = Depends
     name = cur.fetchall()[0][0]
     path = f"uploads/{rid}-{name}"
     cur.execute("select X,Y,n0,sum from encryption_keys where id=%s",(rid,))
-    if name.endswith(".avi"): # video
-        key = cur.fetchall()[0]
-        command = f"./king 0 dvideo '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
-    elif name.endswith(".png"): # image
+    if name.endswith(".png"): # image
         key = cur.fetchall()[0]
         command = f"./king 0 dimg '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
     else:
