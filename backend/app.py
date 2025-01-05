@@ -35,7 +35,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # JWT settings
 SECRET_KEY = os.getenv("SECRET_KEY", "mypocket")  # Use environment variables for sensitive info
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 300
 
 # Database connection setup
 conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
@@ -425,6 +425,8 @@ async def delete_shared_file(id: str,email: str,auth: HTTPAuthorizationCredentia
 
 @app.get("/acl")
 async def getacl(id: str,auth: HTTPAuthorizationCredentials = Depends(security)):
+    print("fuck python")
+    print(auth.credentials)
     user = get_current_user(auth)
     cur = conn.cursor()
     cur.execute("select email from(select * from shared_files join users on shared_files.sharedto=users.id) where resourceid=%s;",(id,))

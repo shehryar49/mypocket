@@ -3,7 +3,7 @@ import { AuthContext } from "../Context/AuthContext";
 import { IoMail } from "react-icons/io5";
 import { formatDistanceToNow } from "date-fns";
 import { IoClose } from "react-icons/io5";
-
+import { IoCameraOutline } from "react-icons/io5";
 const PersonalInfoLayout = ({
   firstName,
   contact,
@@ -14,10 +14,13 @@ const PersonalInfoLayout = ({
 }) => {
   const API_URL = "http://localhost:8000";
   const { user ,imageUrl} = useContext(AuthContext);
+  const handleAddImage = () => {};
+
   return (
     <div className="md:ml-8 mt-6">
       {/* User image,name email */}
       <div className="flex items-center justify-between ml-8 md:ml-0 ">
+            
         {/* Image */}
         <div className="flex items-center gap-3">
           <img
@@ -37,14 +40,25 @@ const PersonalInfoLayout = ({
           </div>
         </div>
 
-        {/* Edit Button */}
+        {/* Change image Button */}
         <div>
-          <button
-            onClick={handleEditButton}
-            className="bg-blue-500 dark:bg-blue-700 dark:text-gray-200 dark:hover:opacity-90 text-white md:w-20 md:h-11 w-14 h-8 text-sm md:text-base rounded-lg hover:opacity-85 transition-all mr-14"
+          {/* Upload */}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            id="image-Upload"
+            onChange={handleAddImage}
+          />
+          <label
+            htmlFor="image-Upload"
+            className="flex cursor-pointer items-center gap-2 bg-blue-500 dark:bg-blue-700 dark:hover:bg-opacity-90 dark:text-gray-200 transition-all hover:bg-blue-600 text-gray-100 font-medium p-1 rounded-lg justify-center px-2"
           >
-            Edit
-          </button>
+            {/* Icon */}
+            <IoCameraOutline className="text-lg" />
+            {/* Text */}
+            <p>Update Profile Picture</p>
+          </label>
         </div>
       </div>
 
@@ -83,9 +97,14 @@ const PersonalInfoLayout = ({
             className="no-arrows md:w-96 w-80 p-3 border-2 transition-all placeholder:text-gray-600 rounded-lg bg-gray-100 outline-none focus:border-blue-400 focus:bg-blue-100 dark:bg-gray-600 dark:focus:bg-gray-700 dark:text-gray-200 dark:placeholder:text-gray-400 dark:focus:border-blue-400 dark:border-gray-600 "
           />
         </div>
-
-      </div>
-
+          
+      </div><br></br>
+      <button
+            onClick={handleEditButton}
+            className="bg-blue-500 dark:bg-blue-700 dark:text-gray-200 dark:hover:opacity-90 text-white md:w-20 md:h-11 w-14 h-8 text-sm md:text-base rounded-lg hover:opacity-85 transition-all mr-14"
+          >
+            Edit
+          </button>
 
     </div>
   );

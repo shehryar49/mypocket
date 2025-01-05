@@ -36,7 +36,7 @@ const Settingslayout = ({ activeTab, setActiveTab }) => {
                     : "hover:bg-white dark:hover:bg-gray-200 dark:hover:text-gray-800 hover:text-black"
                 } cursor-pointer rounded-md p-1  transition-all`}
               >
-                Edit Info
+                General
               </li>
               <li
                 onClick={() => setActiveTab("changePassword")}

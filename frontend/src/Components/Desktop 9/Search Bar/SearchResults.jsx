@@ -16,7 +16,8 @@ const SearchResults = ({
     const filtered = savedPasswords.filter((data) => {
       const isEmailMatch = data.email.toLowerCase().includes(searchValue);
       const isDateMatch = data.date.toLowerCase().includes(searchValue);
-      return isEmailMatch || isDateMatch;
+      const isNoteMatch = data.note.toLowerCase().includes(searchValue);
+      return isEmailMatch || isDateMatch || isNoteMatch;
     });
     setFilteredSearch(filtered);
   };

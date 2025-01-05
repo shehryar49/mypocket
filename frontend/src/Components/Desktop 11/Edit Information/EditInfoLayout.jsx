@@ -55,32 +55,7 @@ const EditInfoLayout = ({
           </div>
         </div>
 
-        {/* Profile Picture */}
-        <div className="flex items-center justify-center md:justify-normal flex-col md:flex-row gap-4 mt-10">
-          <img
-            src={imageUrl}
-            alt=""
-            className="md:w-20 md:h-20 w-10 h-10 rounded-full"
-          />
 
-          {/* Upload */}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            id="image-Upload"
-            onChange={handleAddImage}
-          />
-          <label
-            htmlFor="image-Upload"
-            className="flex cursor-pointer items-center gap-2 bg-blue-500 dark:bg-blue-700 dark:hover:bg-opacity-90 dark:text-gray-200 transition-all hover:bg-blue-600 text-gray-100 font-medium p-1 rounded-lg justify-center px-2"
-          >
-            {/* Icon */}
-            <IoCameraOutline className="text-lg" />
-            {/* Text */}
-            <p>Update Profile Picture</p>
-          </label>
-        </div>
 
       </div>
     </div>
@@ -88,3 +63,5 @@ const EditInfoLayout = ({
 };
 
 export default EditInfoLayout;
+
+//71B block marghazar colony

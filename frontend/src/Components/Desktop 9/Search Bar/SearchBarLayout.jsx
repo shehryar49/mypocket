@@ -38,6 +38,7 @@ const SearchBarLayout = ({ filteredSearch, searchInput, handleSearch }) => {
                   >
                     <span className="font-medium">{data.serialNumber}</span>
                     <span>{data.email}</span>
+                    <span>{data.note}</span>
                     <span className="text-gray-500 dark:text-gray-400">{data.date}</span>
                   </li>
                 ))}

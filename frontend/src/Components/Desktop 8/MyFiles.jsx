@@ -362,6 +362,8 @@ const MyFiles = () => {
             fullWidth
             variant="standard"
           />
+          <input type="checkbox" />
+          <label class="ml-2">Write Access</label>
           <List>
           {emails.map((email, index) => (
             <ListItem

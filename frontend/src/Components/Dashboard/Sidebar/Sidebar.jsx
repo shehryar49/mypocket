@@ -8,7 +8,7 @@ import { IoClose } from "react-icons/io5";
 import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
-  const { user } = useContext(AuthContext);
+  const { user ,imageUrl} = useContext(AuthContext);
   const [isVisible, setIsVisible] = useState(false);
 
   const handleVisibility = () => {
@@ -32,7 +32,7 @@ const Sidebar = () => {
               <img src={user.image} alt="" className="w-12 ml-3 rounded-full" />
             ) : (
               <img
-                src="/assets/dummy-user.png"
+                src={imageUrl}
                 className="w-12 ml-3 rounded-full"
               />
             )}
