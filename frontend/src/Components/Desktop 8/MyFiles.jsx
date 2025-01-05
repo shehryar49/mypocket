@@ -120,13 +120,13 @@ const MyFiles = () => {
       toast.error(error.response.data.msg);
     })
   }
-  const sharefiles  = (email) => {
-    /*if(writeable == "on")
+  const sharefiles  = (email,rw) => {
+    var writeable = false;
+    if(rw === "on")
       writeable = true;
     else
       writeable = false;
-    alert("share files called "+filesToShare.length.toString());
-    */if(filesToShare.length > 1) {
+    if(filesToShare.length > 1) {
       toast.error("Select one file at a time!");
       setFilesToShare([]);
       return;
@@ -138,7 +138,8 @@ const MyFiles = () => {
     }
     const payload = {
       sharedTo: email,
-      rid: filesToShare[0].id
+      rid: filesToShare[0].id,
+      writeable: writeable
     };
     setFilesToShare([]);  
     const token = localStorage.getItem("token");
@@ -342,7 +343,7 @@ const MyFiles = () => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
             const formJson = Object.fromEntries(formData.entries());
-            sharefiles(formJson.email);
+            sharefiles(formJson.email,formJson.rw);
             handleShareClose();
 
           },
@@ -362,7 +363,7 @@ const MyFiles = () => {
             fullWidth
             variant="standard"
           />
-          <input type="checkbox" />
+          <input name="rw" type="checkbox" />
           <label class="ml-2">Write Access</label>
           <List>
           {emails.map((email, index) => (

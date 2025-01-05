@@ -57,6 +57,7 @@ class Password(BaseModel):
 class SharedFile(BaseModel):
     sharedTo: str
     rid: int
+    writeable: bool
 class OTPCred(BaseModel):
     email: str
     password: str
@@ -401,6 +402,7 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     user = get_current_user(auth)
     sharedby = user["id"]
     sharedto_email = file.sharedTo
+    writeable = str(file.writeable).lower()
     cur = conn.cursor()
     cur.execute("select name,id from users where email=%s",(sharedto_email,))
     records = cur.fetchall()

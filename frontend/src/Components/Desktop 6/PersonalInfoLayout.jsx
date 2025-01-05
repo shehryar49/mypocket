@@ -4,6 +4,7 @@ import { IoMail } from "react-icons/io5";
 import { formatDistanceToNow } from "date-fns";
 import { IoClose } from "react-icons/io5";
 import { IoCameraOutline } from "react-icons/io5";
+import {toast} from 'sonner';
 const PersonalInfoLayout = ({
   firstName,
   contact,
@@ -13,9 +14,22 @@ const PersonalInfoLayout = ({
   handleEditButton,
 }) => {
   const API_URL = "http://localhost:8000";
-  const { user ,imageUrl} = useContext(AuthContext);
-  const handleAddImage = () => {};
+  const { user ,imageUrl,setImageUrl} = useContext(AuthContext);
+  const handleAddImage = (e) => {
+    const image = e.target.files[0];
+    const token = localStorage.getItem("token");
+    const headers = {Authorization: `Bearer ${token}`};
+    if (image) {
+      let formData = new FormData();
+      formData.append("image", image);
+      fetch(API_URL+"/profile_pic", {method: "POST", body: formData, headers: headers}).then((response) => {
+        toast.success("Profile Picture updated.");
+        console.log("setting image key");
+        setImageUrl(API_URL+`/profile_pic?id=${user.id}&r=`+Math.random().toString());
+      });
 
+    }
+  };
   return (
     <div className="md:ml-8 mt-6">
       {/* User image,name email */}

@@ -19,6 +19,12 @@ const AuthProvider = ({ children }) => {
   const [twoFactor, setTwoFactor] = useState(false);
   const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
   const [tmp,setTmp] = useState();
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedMode = localStorage.getItem("darkMode");
+    return savedMode === "true";
+  });
+
   // Logout function to clear state and localStorage
   const logout = async () => {
     try {
@@ -101,6 +107,8 @@ const AuthProvider = ({ children }) => {
         login,
         logout,
         signup,  // Expose signUp to the context
+        isDarkMode,
+        setIsDarkMode,
       }}
     >
       {children}

@@ -30,14 +30,14 @@ const FilesStorage = ({ storageData }) => {
 
   /* The `renderProgressBarColors` function in the provided code snippet is responsible for rendering
 different colored progress bars based on the type of file and its size. */
-  const renderProgressBarColors = (file, size) => {
+  const renderProgressBarColors = (file, count,total) => {
     if (file === "password") {
       return (
         <div className="bg-gray-200 dark:bg-gray-400 w-full h-2 rounded-full">
           <div
             className="bg-blue-500 h-2 rounded-full"
             style={{
-              width: `${(size / 128) * 100}%`,
+              width: `${(count / total) * 100}%`,
             }}
           ></div>
         </div>
@@ -48,7 +48,7 @@ different colored progress bars based on the type of file and its size. */
           <div
             className="bg-blue-600 h-2 rounded-full"
             style={{
-              width: `${(size / 128) * 100}%`,
+              width: `${(count / total) * 100}%`,
             }}
           ></div>
         </div>
@@ -59,7 +59,7 @@ different colored progress bars based on the type of file and its size. */
           <div
             className="bg-blue-800 h-2 rounded-full"
             style={{
-              width: `${(size / 128) * 100}%`,
+              width: `${(count / total) * 100}%`,
             }}
           ></div>
         </div>
@@ -70,7 +70,7 @@ different colored progress bars based on the type of file and its size. */
           <div
             className="bg-blue-900 h-2 rounded-full"
             style={{
-              width: `${(size / 128) * 100}%`,
+              width: `${(count / total) * 100}%`,
             }}
           ></div>
         </div>
@@ -81,7 +81,7 @@ different colored progress bars based on the type of file and its size. */
           <div
             className="bg-blue-700 h-2 rounded-full"
             style={{
-              width: `${(size / 128) * 100}%`,
+              width: `${(count / total) * 100}%`,
             }}
           ></div>
         </div>
@@ -120,7 +120,7 @@ different colored progress bars based on the type of file and its size. */
 
               {/* Progress Bar */}
               <div className="flex items-center w-32 ml-2 xl:mr-24 lg:mr-16"> 
-              {renderProgressBarColors(file.type, file.size)} 
+              {renderProgressBarColors(file.type, file.count,storageData.length)} 
               </div>
             </div>
           ))}

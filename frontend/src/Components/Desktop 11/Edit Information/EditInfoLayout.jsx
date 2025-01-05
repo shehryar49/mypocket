@@ -8,14 +8,12 @@ import DarkModeToggle from "../Toggle Buttons/DarkModeToggle";
 import EmailNotifiToggle from "../Toggle Buttons/EmailNotifiToggle";
 const API_URL = "http://localhost:8000";
 const EditInfoLayout = ({
-  imageUrl,
   user,
   formattedBirth,
   handleDateOfBirth,
   updatedNumber,
   handleNumber,
   handleSaveChanges,
-  handleAddImage,
 }) => {
   return (
     <div>
