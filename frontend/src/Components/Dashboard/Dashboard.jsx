@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar/Sidebar";
 import Header from "./Header";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
@@ -6,6 +7,7 @@ import RectangleIcon from "../Global/RectangleIcon";
 import Cards from "./Cards/Cards";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [files, setFiles] = useState([]);
 
   const [sortOption, setSortOption] = useState(null);

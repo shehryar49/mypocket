@@ -36,7 +36,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "mypocket")  # Use environment variables for sensitive info
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
-
+OTP_EXPIRY_TIME = 10  # 10 minutes
 # Database connection setup
 conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
 conn.autocommit = True
@@ -91,6 +91,22 @@ def hash_password(password: str):
 def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
+def get_write_permission(cur,rid,to):
+    curr = None
+    while True:
+        cur.execute(f"select parentid,userid from filesystem where id={rid}")
+        records = cur.fetchall()
+        rid = records[0][0]
+        ownerid = records[0][1]
+        if ownerid == to:
+            return True
+        if rid == -1:
+            return False
+        cur.execute(f"select write_access from acl where resourceid={rid} and sharedto={to}")
+        records = cur.fetchall()
+        if len(records) != 0:
+            return records[0][0]
+    return False
 @app.post("/signup")
 async def create_user(req: User):
     cur = conn.cursor()
@@ -136,9 +152,15 @@ async def otpsignin(req: OTPCred):
     cur = conn.cursor()
     cur.execute("SELECT password, name, id, tfa FROM users WHERE email = %s", (req.email,))
     records = cur.fetchall()
-    cur.execute("select code from otp where userid=%s",(records[0][2],))
-    otp = cur.fetchall()[0][0]
+
+    cur.execute("select code,EXTRACT(epoch from now() - created_at) from otp where userid=%s",(records[0][2],))
+    tmp = cur.fetchall()
+    otp = tmp[0][0]
+    time = tmp[0][1]
+    
     cur.execute("delete from otp where userid=%s",(records[0][2],))
+    if time >= 60 * OTP_EXPIRY_TIME:
+        return JSONResponse({'msg': 'OTP has expired. Try again'})
     if otp != req.otp:
         return JSONResponse({'msg': "Incorrect OTP headback to login page"},401)
     if not records or not verify_password(req.password, records[0][0]):
@@ -212,10 +234,23 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
     cur.execute("select rtype,userid from filesystem where id=%s",(parentrid,))
     records = cur.fetchall()
     if len(records) != 1:
-        return JSONResponse({'msg': 'Invalid resource id'},404)
+        return JSONResponse({'error': 'Invalid resource id'},404)
     if records[0][0] != 1:
-        return JSONResponse({'msg': 'Uploads only supported to a folder!'},400)
-
+        return JSONResponse({'error': 'Uploads only supported to a folder!'},400)
+    ownerid = records[0][1]
+    # check permissions    
+    if ownerid != user["id"]:
+        # look for a direct entry
+        cur.execute("select write_access from acl where sharedto=%s and resourceid=%s",(user["id"],parentrid))
+        records = cur.fetchall()
+        if len(records) != 0 and not records[0][0]:
+            return JSONResponse({'error': 'You do not have permissions to upload here'},403)
+        if len(records) == 0:
+            write_access = get_write_permission(cur,parentrid,user["id"])
+            if not write_access:   
+                return JSONResponse({'error': 'You do not have permissions to upload here'},403)
+        # user is authorized to whatever with this resource
+    
     cur.execute(f"insert into filesystem(userid,rname,rtype,parentid) VALUES({user['id']},'{file.filename}',0,{parentrid}) RETURNING id;")
     records = cur.fetchall()
     id = records[0][0]
@@ -238,6 +273,20 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
 async def create_folder(foldername: str,parentid: int,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     cur = conn.cursor()
+    cur.execute("select userid from filesystem where id=%s",(parentid,))
+    ownerid = cur.fetchall()[0][0]
+    
+    if ownerid != user["id"]:
+        cur.execute("select write_access from acl where sharedto=%s and resourceid=%s",(user["id"],parentid))
+        records = cur.fetchall()
+        if len(records) != 0 and not records[0][0]:
+            return JSONResponse({'error': 'You do not have permissions to create folder here'},403)
+        if len(records) == 0:
+            write_access = get_write_permission(cur,parentid,user["id"])
+            if not write_access:   
+                return JSONResponse({'error': 'You do not have permissions to create a folder here'},403)
+        # user is authorized to whatever with this resource
+    
     cur.execute("insert into filesystem(userid,rname,rtype,parentid) VALUES(%s,%s,1,%s) RETURNING id;",(user["id"],foldername,parentid))
     records = cur.fetchall()
     return JSONResponse({'msg': 'Folder created','id': records[0][0]})
@@ -252,12 +301,15 @@ async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(s
     resource_owner = records[0][1]
     rtype = records[0][2]
     # the user has resource id that means he has access, no need to do the following
-    #if resource_owner != user["id"]:
-    #    cur.execute("select id from shared_files where sharedto=%s and resourceid=%s",(user["id"],id))
-    #    records = cur.fetchall()
-    #    print(records)
-    #    if len(records) == 0:     
-    #        return JSONResponse({'msg': 'You do not have permissions to delete this!'},403)
+    if resource_owner != user["id"]:
+        cur.execute("select write_access from acl where sharedto=%s and resourceid=%s",(user["id"],id))
+        records = cur.fetchall()
+        if len(records) != 0 and not records[0][0]:
+            return JSONResponse({'error': 'You do not have permissions to create folder here'},403)
+        if len(records) == 0:
+            write_access = get_write_permission(cur,id,user["id"])
+            if not write_access:   
+                return JSONResponse({'error': 'You do not have permissions to delete this!'},403)
         # user is authorized to whatever with this resource
     cur.execute("delete from filesystem where id=%s",(id,))
     cur.execute("delete from shared_files where resourceid=%s",(id,))
@@ -272,12 +324,13 @@ async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(s
 async def getfiles(folderid: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     cur = conn.cursor()
-    cur.execute("select rtype from filesystem where id=%s",(folderid,))
+    cur.execute("select rtype,parentid from filesystem where id=%s",(folderid,))
     records = cur.fetchall()
     if len(records) != 1:
         return JSONResponse({'msg': 'Invalid folder ID'},400)
     if records[0][0] != 1:
-        return JSONResponse({'msg': 'Resource not a folder. Cannot get it\'s files!'},400)
+        return JSONResponse({'error': 'Resource not a folder. Cannot get it\'s files!'},400)
+    folder_parentid = records[0][1]
     cur.execute("select rname,id,rtype from filesystem where parentid=%s",(folderid,))
     records = cur.fetchall()
     
@@ -287,21 +340,24 @@ async def getfiles(folderid: str,auth: HTTPAuthorizationCredentials = Depends(se
         isdir = (record[2] == 1)
         obj = {'id': record[1],'name': record[0],'isDir': isdir}
         result.append(obj)
+    
     # get shared files in current folder
-    cur.execute(f"select rname,filesystem.id,rtype,shared_files.ownername from filesystem join shared_files on filesystem.id = shared_files.resourceid and sharedto = {user["id"]} and parentid={folderid}")
+    cur.execute(f"select rname,filesystem.id,rtype,acl.ownername from filesystem join acl on filesystem.id = acl.resourceid and sharedto = {user["id"]} and parentid={folderid}")
     records = cur.fetchall()
     for record in records:
         isdir = (record[2] == 1)
         obj = {'id': record[1],'name': f"{record[3]}-{record[1]}-{record[0]}",'isDir': isdir}
         result.append(obj)
-    # get shared files
-    cur.execute(f"select rname,filesystem.id,rtype,shared_files.ownername from filesystem join shared_files on filesystem.id = shared_files.resourceid and sharedto = {user["id"]}")
-    records = cur.fetchall()
-    for record in records:
-        isdir = (record[2] == 1)
-        obj = {'id': record[1],'name': f"{record[3]}-{record[1]}-{record[0]}",'isDir': isdir}
-        result.append(obj)
-    print(result)
+
+    # get all shared files
+    if folder_parentid == -1:
+        cur.execute(f"select rname,filesystem.id,rtype,acl.ownername from filesystem join acl on filesystem.id = acl.resourceid and sharedto = {user["id"]}")
+        records = cur.fetchall()
+        for record in records:
+            isdir = (record[2] == 1)
+            obj = {'id': record[1],'name': f"{record[3]}-{record[1]}-{record[0]}",'isDir': isdir}
+            result.append(obj)
+
     return JSONResponse({'data': result})
 
 @app.get("/storage_info")
@@ -374,8 +430,7 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
     return JSONResponse({'done': done})
 
 @app.get("/decrypted_resource")
-async def get_file(rid: str, token: str):
-    
+async def get_file(rid: str, token: str): 
     user=None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -397,7 +452,7 @@ async def get_file(rid: str, token: str):
     print(file_path)
     return FileResponse(file_path)
 
-@app.post("/sharedfiles")
+@app.post("/acl")
 async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     sharedby = user["id"]
@@ -407,13 +462,13 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     cur.execute("select name,id from users where email=%s",(sharedto_email,))
     records = cur.fetchall()
     if len(records) == 0:
-        return JSONResponse({'msg': 'Email does not exist!'},404)
+        return JSONResponse({'error': 'Email does not exist!'},404)
     sharedto = records[0][1]
     ownername = user["name"]
-    cur.execute(f"insert into shared_files(sharedby,ownername,sharedto,resourceid) VALUES({sharedby},'{ownername}',{sharedto},{file.rid})")
+    cur.execute(f"insert into acl(sharedby,ownername,sharedto,resourceid,write_access) VALUES({sharedby},'{ownername}',{sharedto},{file.rid},{writeable})")
     return JSONResponse({'msg': 'ok'})
 
-@app.delete("/sharedfiles")
+@app.delete("/acl")
 async def delete_shared_file(id: str,email: str,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     sharedby = user["id"]
@@ -427,11 +482,9 @@ async def delete_shared_file(id: str,email: str,auth: HTTPAuthorizationCredentia
 
 @app.get("/acl")
 async def getacl(id: str,auth: HTTPAuthorizationCredentials = Depends(security)):
-    print("fuck python")
-    print(auth.credentials)
     user = get_current_user(auth)
     cur = conn.cursor()
-    cur.execute("select email from(select * from shared_files join users on shared_files.sharedto=users.id) where resourceid=%s;",(id,))
+    cur.execute("select email from(select * from acl join users on acl.sharedto=users.id) where resourceid=%s;",(id,))
     records = cur.fetchall()
     return JSONResponse({'emails': records},200)
 
@@ -483,7 +536,7 @@ async def upload_profile_pic(image: UploadFile, auth: HTTPAuthorizationCredentia
     read = 0
     total = image.size
     if image.content_type != "image/jpeg":
-        return JSONResponse({'msg': 'Please upload a JPEG image'},400)
+        return JSONResponse({'error': 'Please upload a JPEG image'},400)
     opened_file = open(f'profile_pictures/{user["id"]}.jpg',"wb")
     while read < total:
         bytes = await image.read(1024)

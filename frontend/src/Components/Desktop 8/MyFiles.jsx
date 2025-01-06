@@ -44,7 +44,7 @@ const MyFiles = () => {
   const [open, setOpen] = React.useState(false);
   const [shareopen, setshareOpen] = React.useState(false);
   const [filesToShare,setFilesToShare] = React.useState([]);
-  const [emails, setEmails] = useState(["test1@example.com", "test2@example.com","test1@example.com", "test2@example.com"]);
+  const [emails, setEmails] = useState([]);
 
   const getrootid = async () => {
     const token = localStorage.getItem("token");
@@ -90,10 +90,14 @@ const MyFiles = () => {
         const config = {headers: {Authorization: `Bearer ${token}`},method: "POST",body: formData};
         var url = new URL(API_URL+"/resource");
         url.searchParams.append('parentrid', rid);
-        fetch(url.toString(), config).then(() => {
+        fetch(url.toString(), config).then((response) => response.json()).then((response) => {
+          if('error' in response)
+            throw new Error(response.error);
           toast.success("File Uploaded");
           reloadFiles();
-        });
+        }).catch((error) => {
+          toast.error(error.message);
+        })
 
       }
   };
@@ -105,6 +109,8 @@ const MyFiles = () => {
     axios.delete(url.toString(),config).then(() => {
       toast.success("Folder deleted");
       reloadFiles();
+    }).catch((error) => {
+      toast.error(error.response.data.error);
     });
   }
   const deleteFile = (todelete) => {
@@ -117,7 +123,7 @@ const MyFiles = () => {
       toast.success("File deleted");    
       reloadFiles();
     }).catch((error) => {
-      toast.error(error.response.data.msg);
+      toast.error(error.response.data.error);
     })
   }
   const sharefiles  = (email,rw) => {
@@ -144,7 +150,7 @@ const MyFiles = () => {
     setFilesToShare([]);  
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},method: "POST",body: JSON.stringify(payload)};
-    fetch(API_URL+"/sharedfiles",config).then((response) => {
+    fetch(API_URL+"/acl",config).then((response) => {
       
       return [response.json(),response.status];
     }).then((result) => {
@@ -292,13 +298,17 @@ const MyFiles = () => {
   const createFolder = (foldername) => {
     const path = currentPath;
     const token = localStorage.getItem("token");
-//    alert("creating folder in rid "+rid.toString());
     if(rid == 0)
       return;
     const config = {headers: {Authorization: `Bearer ${token}`},params: {foldername: foldername,parentid: rid}};
-    axios.get(API_URL+"/createfolder",config).then(() => {
+    axios.get(API_URL+"/createfolder",config).then((response) =>{
       toast.success("Folder created");
       reloadFiles();
+    }).catch((err) => {
+      if(err.response)
+        toast.error(err.response.data.error);
+      else
+        toast.error(err.message);    
     });
   };
   const removeSharedAccess = (index) => {
@@ -306,7 +316,7 @@ const MyFiles = () => {
     const id = filesToShare[0].id;
     const email = emails[index];
     const config = {headers: {Authorization: `Bearer ${token}`},'method': 'DELETE'};
-    var url = new URL(API_URL+"/sharedfiles");
+    var url = new URL(API_URL+"/acl");
     url.searchParams.append("email",email);
     url.searchParams.append("id",id);
     fetch(url.toString(),config).then((response) => response.json()).then((response) =>{
@@ -315,7 +325,9 @@ const MyFiles = () => {
       console.log(error.message);
     });
   };
-
+  const bakchodi = () => {
+    
+  };
   return (
     <>
     <style>
@@ -424,9 +436,9 @@ const MyFiles = () => {
       </Dialog>
     </React.Fragment>
         <input id="upload-file" type="file" hidden="true" onChange={uploadFile}/>
-        
+        <button onClick={() => bakchodi()}>Fuck me</button>
         <FileBrowser files={files} onFileAction={handleAction} fileActions={myFileActions}>
-            <FileToolbar />
+        <FileToolbar />
             <FileList />
             <FileContextMenu />
         </FileBrowser>

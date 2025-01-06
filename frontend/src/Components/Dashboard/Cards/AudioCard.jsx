@@ -1,7 +1,8 @@
 import React from "react";
 import { FaMicrophone } from "react-icons/fa";
-
+import { useNavigate } from "react-router-dom";
 const Card = () => {
+  const navigate = useNavigate();
   return (
     <>
       <style>
@@ -18,7 +19,7 @@ const Card = () => {
           {/* Microphone image */}
           <div className="relative">
             <div
-              className="absolute 2xl:ml-48 ml-32 mt-8"
+              className="absolute 2xl:ml-48 ml-48 mt-3"
               style={{
                 transform: "rotate(-15deg)",
                 transformOrigin: "top left",
@@ -27,14 +28,10 @@ const Card = () => {
               <img
                 src="/assets/Microphone.png"
                 alt="audio"
-                className="w-16 h-36"
+                className="w-12 h-24"
               />
               {/* Shadow img */}
-              <img
-                src="/assets/shadow.png"
-                alt="shadow"
-                className="absolute w-16 h-10"
-              />
+              
             </div>
           </div>
 
@@ -53,21 +50,17 @@ const Card = () => {
 
               {/* Files */}
               <p className="text-sm text-gray-400 font-normal ml-28 2xl:ml-44 mt-2 dark:text-gray-400">
-                34,430 Files
+               
               </p>
             </div>
 
             {/* Shared with */}
             <div className="mt-10">
               <p className="text-sm text-gray-400 font-normal mb-1 dark:text-gray-400">
-                Shared With:
+                
               </p>
               <div className="flex items-center">
-                <img
-                  src="https://via.placeholder.com/50"
-                  alt="Shared User"
-                  className="w-10 h-10 rounded-full"
-                />
+                
               </div>
             </div>
           </div>
@@ -75,9 +68,9 @@ const Card = () => {
           {/* Bottom content */}
           <div className="flex justify-between items-center mt-12">
             <p className="text-gray-400 font-normal self-end text-sm dark:text-gray-400">
-              Last Edit: Jun 30th 2020
+              
             </p>
-            <button className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-200">
+            <button onClick={()=>navigate("/dashboard/myfiles")} className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-200">
               Open
             </button>
           </div>
