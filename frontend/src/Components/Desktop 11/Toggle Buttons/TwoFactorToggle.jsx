@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext,useEffect } from "react";
 import { AuthContext } from "../../Context/AuthContext";
 import { toast } from "sonner";
 import axios from 'axios';
@@ -20,6 +20,16 @@ const TwoFactorToggle = () => {
     });
   };
   const { twoFactor, setTwoFactor } = useContext(AuthContext);
+  useEffect(()=> {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/tfa",config).then((response)=>{
+      const state = response.data.tfa;
+      setTwoFactor(state);
+    }).catch((err) => {
+      toast.error(err.message);
+    });
+  },[]);
   return (
     <div className="flex items-center justify-center mt-4">
       <button

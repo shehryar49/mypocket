@@ -3,6 +3,9 @@ import AudioCard from "./AudioCard";
 import VideoCard from "./VideoCard";
 import ImageCard from "./ImageCard";
 import FileCard from "./File Cards/FileCard";
+import axios from 'axios';
+
+const API_URL = "http://localhost:8000";
 
 const Cards = ({ sortOption, setFiles, files }) => {
   // Dummy files
@@ -14,7 +17,15 @@ const Cards = ({ sortOption, setFiles, files }) => {
   ];
 
   useEffect(() => {
-    setFiles(dummyFiles);
+//    setFiles(dummyFiles);
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.get(API_URL+"/recentfiles",config).then((response) => {
+      console.log(response.data.files);
+      setFiles(response.data.files);
+    }).catch((err) => {
+      
+    });
   }, []);
 
   const sortedFiles = [...files];

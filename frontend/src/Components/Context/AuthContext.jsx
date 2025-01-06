@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import axios from 'axios';
-
+import { useNavigate } from "react-router-dom";
 // The AuthContext to manage authentication and user data
 export const AuthContext = createContext();
 const API_URL = "http://localhost:8000";
@@ -11,6 +11,7 @@ const AuthProvider = ({ children }) => {
     email: "",
     id: 0
   });
+  const navigate = useNavigate();
   const [loginTime, setLoginTime] = useState(null);
   const [ipAddress, setIpAddress] = useState("");
   const [loginDevice, setLoginDevice] = useState("");
@@ -19,11 +20,16 @@ const AuthProvider = ({ children }) => {
   const [twoFactor, setTwoFactor] = useState(false);
   const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
   const [tmp,setTmp] = useState();
+  const [emailNotifications,setEmailNotifications] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedMode = localStorage.getItem("darkMode");
     return savedMode === "true";
   });
+  useEffect(() => {
+    localStorage.setItem("darkMode", isDarkMode);
+    document.body.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
 
   // Logout function to clear state and localStorage
   const logout = async () => {
@@ -59,7 +65,6 @@ const AuthProvider = ({ children }) => {
       toast.error("Login failed. Please try again.");
     }
   };
-  
 
   // Sign-up function with API call to FastAPI server
   const signup = (newUser) => {
@@ -75,7 +80,15 @@ const AuthProvider = ({ children }) => {
         toast.error("An error occurred");
       });
   };
+  const deleteAccount = () => {
+    const token = localStorage.getItem("token");
+    const config = {headers: {Authorization: `Bearer ${token}`}};
+    axios.delete(API_URL+"/account",config).then((response) => {
+      navigate("/signin")
+    }).catch((error) => {
 
+    });
+  }
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -93,6 +106,8 @@ const AuthProvider = ({ children }) => {
       value={{
         user,
         imageUrl,
+        emailNotifications,
+        setEmailNotifications,
         setUser,
         setImageUrl,
         twoFactor,
@@ -106,6 +121,7 @@ const AuthProvider = ({ children }) => {
         setTmp,
         login,
         logout,
+        deleteAccount,
         signup,  // Expose signUp to the context
         isDarkMode,
         setIsDarkMode,

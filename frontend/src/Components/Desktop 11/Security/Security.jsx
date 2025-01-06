@@ -37,19 +37,7 @@ const Security = () => {
    * deletes the account if they match, otherwise it displays an error message.
    */
   const handleDeleteAccount = () => {
-    if (password === user.password) {
-      deleteAccount();
-      toast.success("Account deleted successfully.");
-    } else if (password.length === 0) {
-      toast.error("Please enter your password to confirm account deletion.");
-    } else {
-      toast.error(
-        "Oops! That password doesn't seem right. Please check and try again."
-      );
-      setIsConfirmDelete(false);
-      setPassword("");
-      setShowPassword(false);
-    }
+    deleteAccount(); 
   };
   return (
     <div>

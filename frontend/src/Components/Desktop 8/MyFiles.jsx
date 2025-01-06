@@ -325,9 +325,7 @@ const MyFiles = () => {
       console.log(error.message);
     });
   };
-  const bakchodi = () => {
-    
-  };
+
   return (
     <>
     <style>
@@ -436,7 +434,6 @@ const MyFiles = () => {
       </Dialog>
     </React.Fragment>
         <input id="upload-file" type="file" hidden="true" onChange={uploadFile}/>
-        <button onClick={() => bakchodi()}>Fuck me</button>
         <FileBrowser files={files} onFileAction={handleAction} fileActions={myFileActions}>
         <FileToolbar />
             <FileList />

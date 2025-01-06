@@ -4,13 +4,14 @@ import { RiEdit2Fill } from "react-icons/ri";
 import { FaEye } from "react-icons/fa";
 import { MdPersonAddAlt1 } from "react-icons/md";
 import { TiHeartFullOutline } from "react-icons/ti";
+import { useNavigate } from "react-router-dom";
 
 const DocumentFileCard = ({ file }) => {
   const [isEdit, setIsEdit] = useState(false);
   const [isSeen, setIsSeen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [Heart, setHeart] = useState(false);
-
+  const navigate = useNavigate();
   const handleEdit = () => {
     setIsEdit(!isEdit);
   };
@@ -41,48 +42,9 @@ const DocumentFileCard = ({ file }) => {
         {/* Document icon */}
         <IoDocumentText className="w-8 h-10 dark:text-gray-300" />
         {/* Document Name */}
-        <h1 className="text-base font-medium mb-8 dark:text-gray-300">{file.name}</h1>
+        <button onClick={()=>navigate("myfiles")} className="text-base font-medium mb-8 dark:text-gray-300">{file.name}</button>
 
-        {/* Buttons*/}
-        <div className="bg-white dark:bg-gray-700 w-[220px] h-14 rounded-[22px] absolute bottom-1">
-          <div className="flex items-center justify-center gap-2 mt-5">
-            {/* Edit button */}
-            <button onClick={handleEdit}>
-              {!isEdit ? (
-                <RiEdit2Fill className="h-5 w-6 dark:text-gray-300" />
-              ) : (
-                <RiEdit2Fill className="h-5 w-6 text-blue-500 dark:text-blue-600 transition-all" />
-              )}
-            </button>
 
-            {/* Seen button */}
-            <button onClick={handleSeen}>
-              {!isSeen ? (
-                <FaEye className="h-5 w-6 dark:text-gray-300" />
-              ) : (
-                <FaEye className="h-5 w-6 text-blue-500 dark:text-blue-600 transition-all" />
-              )}
-            </button>
-
-            {/* Add Button */}
-            <button onClick={handleAdded}>
-              {!isAdded ? (
-                <MdPersonAddAlt1 className="h-5 w-6 dark:text-gray-300" />
-              ) : (
-                <MdPersonAddAlt1 className="h-5 w-6 text-blue-500 dark:text-blue-600 transition-all" />
-              )}
-            </button>
-
-            {/* Heart Button */}
-            <button className="ml-16" onClick={handleHeart}>
-              {!Heart ? (
-                <TiHeartFullOutline className="h-5 w-6 dark:text-gray-300" />
-              ) : (
-                <TiHeartFullOutline className="h-5 w-6 text-red-500 dark:text-red-600  transition-all" />
-              )}
-            </button>
-          </div>
-        </div>
       </div>
     </>
   );

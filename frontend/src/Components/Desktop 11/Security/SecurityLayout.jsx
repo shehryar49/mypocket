@@ -94,31 +94,6 @@ const SecurityLayout = ({
             account and remove your data from our servers.
           </p>
 
-          {/* Password Input */}
-          <div className="relative w-full mb-4 flex flex-col gap-2 mt-4">
-            <h1 className="font-medium text-sm text-start ml-1 dark:text-gray-300">
-              Enter your password to confirm
-            </h1>
-            <input
-              type={`${showPassword ? "text" : "password"}`}
-              value={password}
-              onChange={handlePassword}
-              placeholder="Enter your password"
-              className="w-full p-2 border-2 shadow-sm border-gray-300 rounded-lg transition-colors focus:bg-blue-100 outline-none focus:border-blue-400 dark:shadow-gray-400 dark:bg-gray-600 dark:focus:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:focus:border-blue-400"
-            />
-
-            {/*Show Password Button*/}
-            <button
-              onClick={handleShowPassword}
-              className="absolute right-4 bottom-[14px]"
-            >
-              {showPassword ? (
-                <FaRegEyeSlash className="text-blue-500 dark:hover:text-blue-400 hover:text-blue-600 transition-all" />
-              ) : (
-                <FaRegEye className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all" />
-              )}
-            </button>
-          </div>
 
           {/* Buttons */}
           <div className="flex w-full flex-col gap-2 mt-3">

@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException,File,UploadFile
 from fastapi.responses import Response,JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -14,6 +15,10 @@ import shutil
 import glob
 import random
 import subprocess
+import requests
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 
 # Initialize app and security context
 app = FastAPI()
@@ -70,6 +75,8 @@ def fork_proc(command):
     if pid == 0:
         os.system(command)
         exit()
+    return 0
+def email():
     return 0
 def get_current_user(authorization: HTTPAuthorizationCredentials = Depends(security)):
     token = authorization.credentials
@@ -128,6 +135,35 @@ async def create_user(req: User):
         raise HTTPException(status_code=400, detail="An error occurred") #Error: Data too long for one or more fields.")
     except Exception as e:
         raise HTTPException(status_code=500, detail="An error occurred")#f"Error: {str(e)}")
+
+@app.get("/googlesignin")
+async def google_sigin(google_token: str):
+    try:
+        idinfo = id_token.verify_oauth2_token(google_token, requests.Request(),"367333986160-1np49tp20395u5e58pep7vuuf7mt2u2q.apps.googleusercontent.com")
+        # ID token is valid. Get the user's Google Account ID from the decoded token.
+        userid = idinfo['sub']
+        print(idinfo)
+        name = idinfo["name"]
+        email = idinfo["email"]
+        cur = conn.cursor()
+        cur.execute("select name,id,tfa from users where email=%s",(email,))
+        records = cur.fetchall()
+        if len(records) == 1: # sign in
+            token = create_access_token(data={"email": email, "name": name,"id": records[0][1]})
+            cur.execute(f"UPDATE users set active_sessions=active_sessions+1 where email='{email}' RETURNING active_sessions")
+            tmp = cur.fetchall()[0][0]
+            return JSONResponse({"access_token": token,"name": name,'email': email,'id': records[0][1],'active_sessions': tmp})
+        else: # create new account
+            cur.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, NULL);", (name, email))
+            cur.execute("SELECT id from users where email=%s",(email,))
+            id = cur.fetchall()[0][0]
+            cur.execute(f"UPDATE users set active_sessions=active_sessions+1 where email='{email}'")
+            cur.execute(f"insert into filesystem(userid,rname,rtype,parentid) VALUES({id},'root',1,-1);")
+            token = create_access_token(data={"email": email, "name": name,"id": id})
+            return JSONResponse({"msg": "User created successfully!","access_token": token,"name": name,'email': email,'id': id,'active_sessions': 1}, status_code=201)
+    except ValueError:
+        # Invalid token
+        raise HTTPException(status_code=401,detail="Invalid login")
 
 @app.post("/login")
 async def login(req: Cred):
@@ -193,6 +229,13 @@ async def logout(auth: HTTPAuthorizationCredentials = Depends(security)):
     cur.execute("UPDATE users set active_sessions=active_sessions-1 where email=%s",(email,))
     return JSONResponse({},200)
 
+@app.get("/tfa")
+async def get_tfa(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select tfa from users where id=%s",(user["id"],))
+    return JSONResponse({'tfa': cur.fetchall()[0][0]})
+
 @app.get("/toggle2FA")
 async def toggle2FA(auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
@@ -215,6 +258,31 @@ async def changename(name: str,contact: str,auth: HTTPAuthorizationCredentials =
     cur.execute('update users set name = %s where id=%s',(name,int(user["id"])))
     return JSONResponse({},status_code=200)
 
+@app.get("/email_notifications")
+async def get_email_notif_state(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select email_notifications from users where id=%s",(user["id"],))
+    return JSONResponse({'email_notifications': cur.fetchall()[0][0]})
+
+@app.get("/set_email_notifications")
+async def get_email_notif_state(notif: bool,auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("update users set email_notifications=%s where id=%s",(notif,user["id"]))
+    return JSONResponse({})
+
+@app.delete("/account")
+async def delete_account(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("delete from users where id=%s",(user["id"],))
+    cur.execute("delete from filesystem where userid=%s",(user["id"],))
+    cur.execute("delete from acl where sharedby=%s",(user["id"],))
+    cur.execute("delete from passwords where userid=%s",(user["id"],))
+    
+    return JSONResponse({})
+    
 # Filesystem related stuff
 
 @app.get("/rootid")
@@ -224,6 +292,23 @@ async def getrootid(auth: HTTPAuthorizationCredentials = Depends(security)):
     cur.execute("select id from filesystem where userid=%s and parentid=-1",(user["id"],))
     records = cur.fetchall()
     return JSONResponse({'id': records[0][0]})
+@app.get("/recentfiles")
+async def get_recent_files(auth: HTTPAuthorizationCredentials = Depends(security)):
+    user = get_current_user(auth)
+    cur = conn.cursor()
+    cur.execute("select rname,id,parentid from (select * from filesystem order by last_modified) where userid=%s and (parentid != -1) and (rtype = 0)",(user["id"],))
+    records = cur.fetchall()
+    result = []
+    for record in records:
+        t = "document"
+        if record[0].endswith(".mp4"):
+            t = "video"
+        elif record[0].endswith(".mp3"):
+            t = "audio"
+        elif record[0].endswith(".png"):
+            t = "image"
+        result.append({'name': record[0],'type': t,'id': record[1],'src': record[0],'parentid': record[2]})
+    return JSONResponse({'files': result})
 
 @app.post("/resource")
 async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAuthorizationCredentials = Depends(security)):
@@ -416,6 +501,7 @@ async def begin_decryption(rid: str,auth: HTTPAuthorizationCredentials = Depends
         command = f"./king 0 dimg '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
     else:
         command = f"openssl enc -aes-256-cbc -d -salt -in '{path}' -out 'decrypted/{name}' -pass pass:mypocket && python decryption-done.py {rid} '{name}'"
+    cur.execute("update filesystem set last_modified=now() where id=%s",(rid,))
     os.system(command)
     return JSONResponse({'msg': 'Started'},200)
 

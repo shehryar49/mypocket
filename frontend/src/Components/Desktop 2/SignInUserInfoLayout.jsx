@@ -49,7 +49,7 @@ const UserInfoLayout = ({
         {/* Button to show password */}
         <button
           onClick={showVisibility}
-          className="absolute right-7 bottom-60 mb-6"
+          className="absolute right-7 top-36 mb-6"
         >
           {showPassword ? (
             <FaRegEyeSlash className="text-blue-600 dark:text-blue-500 dark:hover:text-blue-400 hover:text-blue-700" />
@@ -82,9 +82,6 @@ const UserInfoLayout = ({
 
           {/* Sign in with Google Button */}
           <GoogleButton />
-
-          {/* Sign in with Facebook Button */}
-          <FacebookButton />
         </div>
       </div>
     </div>
