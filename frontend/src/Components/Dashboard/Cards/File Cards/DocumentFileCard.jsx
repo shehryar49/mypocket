@@ -5,6 +5,8 @@ import { FaEye } from "react-icons/fa";
 import { MdPersonAddAlt1 } from "react-icons/md";
 import { TiHeartFullOutline } from "react-icons/ti";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../Context/AuthContext";
+import { flushSync } from "react-dom";
 
 const DocumentFileCard = ({ file }) => {
   const [isEdit, setIsEdit] = useState(false);
@@ -12,6 +14,14 @@ const DocumentFileCard = ({ file }) => {
   const [isAdded, setIsAdded] = useState(false);
   const [Heart, setHeart] = useState(false);
   const navigate = useNavigate();
+  const {fileBrowserRoot,setFileBrowserRoot} = useAuth();
+
+  const openFileBrowser = (fileid) => {
+    setFileBrowserRoot(fileid);
+    flushSync(() => {
+      navigate("myfiles");
+    });
+  };
   const handleEdit = () => {
     setIsEdit(!isEdit);
   };
@@ -42,7 +52,7 @@ const DocumentFileCard = ({ file }) => {
         {/* Document icon */}
         <IoDocumentText className="w-8 h-10 dark:text-gray-300" />
         {/* Document Name */}
-        <button onClick={()=>navigate("myfiles")} className="text-base font-medium mb-8 dark:text-gray-300">{file.name}</button>
+        <button onClick={()=>openFileBrowser(file.parentid)} className="text-base font-medium mb-8 dark:text-gray-300">{file.name}</button>
 
 
       </div>

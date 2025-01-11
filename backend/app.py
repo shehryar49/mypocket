@@ -10,9 +10,6 @@ from pathlib import Path
 import os
 import jwt
 import psycopg
-import base64
-import shutil
-import glob
 import random
 import subprocess
 import requests

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { flushSync } from 'react-dom';
 import Sidebar from "../Dashboard/Sidebar/Sidebar";
+import { useAuth } from "../Context/AuthContext";
 import {
   Dialog,
   DialogActions,
@@ -38,7 +39,7 @@ var rid = 0;
 var rootID = 0;
 var tmp = 0;
 const MyFiles = () => {
-
+  const {fileBrowserRoot} = useAuth();
   const [files,setFiles] = useState([]);
   const [currentPath,setCurrentPath] = useState("");
   const [open, setOpen] = React.useState(false);
@@ -54,18 +55,30 @@ const MyFiles = () => {
   };
 
   useEffect(() => {
-    
-    getrootid().then((id) => {
-        rid = id;
-        rootID = id;
-        const token = localStorage.getItem("token");
-        const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: id.toString()}};
-        axios.get(API_URL+"/files",config).then((response) => {
-          console.log(response.data.data);
-          setFiles(response.data.data);
-        });
-      
-    });
+    if(fileBrowserRoot !== null) {
+      rid = fileBrowserRoot;
+      rootID = fileBrowserRoot;
+      const token = localStorage.getItem("token");
+      const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: fileBrowserRoot.toString()}};
+      axios.get(API_URL+"/files",config).then((response) => {
+        console.log(response.data.data);
+        setFiles(response.data.data);
+      });
+    }
+    else
+    {
+      getrootid().then((id) => {
+          rid = id;
+          rootID = id;
+          const token = localStorage.getItem("token");
+          const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: id.toString()}};
+          axios.get(API_URL+"/files",config).then((response) => {
+            console.log(response.data.data);
+            setFiles(response.data.data);
+          });
+        
+      });
+    }
   },[]);
 
 

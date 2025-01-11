@@ -21,7 +21,7 @@ const AuthProvider = ({ children }) => {
   const [imageUrl,setImageUrl] = useState(""); //to indicate profile picture changed state
   const [tmp,setTmp] = useState();
   const [emailNotifications,setEmailNotifications] = useState(false);
-
+  const [fileBrowserRoot,setFileBrowserRoot] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedMode = localStorage.getItem("darkMode");
     return savedMode === "true";
@@ -125,6 +125,8 @@ const AuthProvider = ({ children }) => {
         signup,  // Expose signUp to the context
         isDarkMode,
         setIsDarkMode,
+        fileBrowserRoot,
+        setFileBrowserRoot
       }}
     >
       {children}
