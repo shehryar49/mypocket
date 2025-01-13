@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException,File,UploadFile
+from fastapi import FastAPI, Depends, HTTPException,File,UploadFile,BackgroundTasks
 from fastapi.responses import Response,JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,14 +7,15 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from pathlib import Path
+from google.oauth2 import id_token
+from google.auth.transport import requests
 import os
 import jwt
 import psycopg
 import random
 import subprocess
 import requests
-from google.oauth2 import id_token
-from google.auth.transport import requests
+import smtplib, ssl
 
 
 # Initialize app and security context
@@ -73,8 +74,21 @@ def fork_proc(command):
         os.system(command)
         exit()
     return 0
-def email():
-    return 0
+def sendmail(receiver_email,message):
+    port = 587 #465  # For SSL
+    password = "wujf fyud poqt arsi "
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+
+    server = smtplib.SMTP("smtp.gmail.com", port)
+    server.ehlo()
+    server.starttls()
+    server.ehlo()
+    server.login("mypocketotp@gmail.com", password)
+    # Send email here
+    sender_email = "mypocketotp@gmail.com"
+    server.sendmail(sender_email, receiver_email, message)
+
 def get_current_user(authorization: HTTPAuthorizationCredentials = Depends(security)):
     token = authorization.credentials
     try:
@@ -163,7 +177,7 @@ async def google_sigin(google_token: str):
         raise HTTPException(status_code=401,detail="Invalid login")
 
 @app.post("/login")
-async def login(req: Cred):
+async def login(req: Cred,bg: BackgroundTasks):
     cur = conn.cursor()
     cur.execute("SELECT password, name, id, tfa FROM users WHERE email = %s", (req.email,))
     records = cur.fetchall()
@@ -172,7 +186,11 @@ async def login(req: Cred):
     if records[0][3]: # 2FA enabled
         # generate otp and mail it
         otp = random.randint(1000,9999)
-        p = subprocess.Popen(['python','sendmail.py',req.email,str(otp)])
+        message = f"""\
+Subject: My Pocket OTP
+
+Your OTP is {otp}."""
+        bg.add_task(sendmail,req.email,message)
         cur.execute("insert into otp(userid,code) VALUES(%s,%s)",(records[0][2],otp))
         return  JSONResponse({"email": req.email,"password": req.password,"otp": True})
     token = create_access_token(data={"email": req.email, "name": records[0][1],"id": records[0][2]})
@@ -204,7 +222,7 @@ async def otpsignin(req: OTPCred):
     return JSONResponse({"access_token": token,"name": records[0][1],'email': req.email,'id': records[0][2],'active_sessions': tmp})
 
 @app.get("/forgotpassword")
-async def forgotpassword(email: str):
+async def forgotpassword(email: str,bg: BackgroundTasks):
     cur = conn.cursor()
     cur.execute("select id from users where email=%s",(email,))
     records = cur.fetchall()
@@ -214,7 +232,11 @@ async def forgotpassword(email: str):
     # generate a random otp like password
     password = random.randint(100000,999999)
     cur.execute("update users set password=%s where email=%s",(hash_password(str(password)),email))
-    os.system(f"python sendpassword.py {email} {password}")
+    message = f"""\
+Subject: My Pocket Password Reset
+
+Your new password is {password}. Use this to login and CHANGE THE PASSWORD!"""
+    bg.add_task(sendmail,email,message)
     return JSONResponse({},200)
 
 # Secure endpoints
