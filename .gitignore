@@ -11,3 +11,5 @@ backend/uploads
 backend/profile_pictures
 backend/decrypted
 backend/king
+frontend/dist/
+frontend/.vercel

@@ -553,8 +553,6 @@ async def get_file(rid: str, token: str):
         return JSONResponse({'msg': 'try later'},404)
     cur.execute("delete from decrypting where id=%s",(rid,))
     file_path = f"decrypted/{name}"
-    print("!!!!!!!!!!!!!!!HERE!!!!!!!!!!!!!!!!!!")
-    print(file_path)
     return FileResponse(file_path)
 
 @app.post("/acl")
@@ -564,13 +562,16 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     sharedto_email = file.sharedTo
     writeable = str(file.writeable).lower()
     cur = conn.cursor()
-    cur.execute("select name,id from users where email=%s",(sharedto_email,))
+    cur.execute("select name,id,email_notifciations from users where email=%s",(sharedto_email,))
     records = cur.fetchall()
     if len(records) == 0:
         return JSONResponse({'error': 'Email does not exist!'},404)
     sharedto = records[0][1]
+    notif = records[0][2]
     ownername = user["name"]
     cur.execute(f"insert into acl(sharedby,ownername,sharedto,resourceid,write_access) VALUES({sharedby},'{ownername}',{sharedto},{file.rid},{writeable})")
+    if notif:
+        bg.add_task(sendmail,user["email"],message)
     return JSONResponse({'msg': 'ok'})
 
 @app.delete("/acl")
