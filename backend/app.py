@@ -226,7 +226,6 @@ async def forgotpassword(email: str,bg: BackgroundTasks):
     cur = conn.cursor()
     cur.execute("select id from users where email=%s",(email,))
     records = cur.fetchall()
-    print(records)
     if len(records) != 1:
         return JSONResponse({'msg': 'Email address not found!'},404)
     # generate a random otp like password
@@ -530,7 +529,8 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
     cur = conn.cursor()
     cur.execute("select done,name from decrypting where rid=%s",(rid,))
     records = cur.fetchall()
-    return JSONResponse({'done': False})    
+    if len(records) == 0:
+        return JSONResponse({'done': False})    
     done = records[0][0]
     return JSONResponse({'done': done})
 
@@ -556,13 +556,13 @@ async def get_file(rid: str, token: str):
     return FileResponse(file_path)
 
 @app.post("/acl")
-async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = Depends(security)):
+async def addsharedfile(file: SharedFile,bg: BackgroundTasks,auth: HTTPAuthorizationCredentials = Depends(security)):
     user = get_current_user(auth)
     sharedby = user["id"]
     sharedto_email = file.sharedTo
     writeable = str(file.writeable).lower()
     cur = conn.cursor()
-    cur.execute("select name,id,email_notifciations from users where email=%s",(sharedto_email,))
+    cur.execute("select name,id,email_notifications from users where email=%s",(sharedto_email,))
     records = cur.fetchall()
     if len(records) == 0:
         return JSONResponse({'error': 'Email does not exist!'},404)
@@ -570,8 +570,13 @@ async def addsharedfile(file: SharedFile,auth: HTTPAuthorizationCredentials = De
     notif = records[0][2]
     ownername = user["name"]
     cur.execute(f"insert into acl(sharedby,ownername,sharedto,resourceid,write_access) VALUES({sharedby},'{ownername}',{sharedto},{file.rid},{writeable})")
+    print(notif)
     if notif:
-        bg.add_task(sendmail,user["email"],message)
+        message = f"""\
+Subject: My Pocket Resource Shared
+
+A resource was shared with you by {user["email"]}"""
+        bg.add_task(sendmail,sharedto_email,message)
     return JSONResponse({'msg': 'ok'})
 
 @app.delete("/acl")
@@ -583,7 +588,7 @@ async def delete_shared_file(id: str,email: str,auth: HTTPAuthorizationCredentia
     cur.execute("select id from users where email=%s",(email,))
     records = cur.fetchall()
     sharedto = records[0][0]
-    cur.execute("delete from shared_files where resourceid=%s and sharedto=%s and sharedby=%s",(id,sharedto,sharedby))
+    cur.execute("delete from acl where resourceid=%s and sharedto=%s and sharedby=%s",(id,sharedto,sharedby))
     return JSONResponse({},200)
 
 @app.get("/acl")

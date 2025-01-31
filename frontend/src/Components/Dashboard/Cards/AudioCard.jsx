@@ -1,8 +1,15 @@
 import React from "react";
 import { FaMicrophone } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../Context/AuthContext";
+
 const Card = () => {
   const navigate = useNavigate();
+  const {setSearchedText} = useAuth();
+  const showAudios = () => {
+    setSearchedText(".mp3");
+    navigate("/dashboard/myfiles");
+  };
   return (
     <>
       <style>
@@ -70,7 +77,7 @@ const Card = () => {
             <p className="text-gray-400 font-normal self-end text-sm dark:text-gray-400">
               
             </p>
-            <button onClick={()=>navigate("/dashboard/myfiles")} className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-200">
+            <button onClick={()=>showAudios()} className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-200">
               Open
             </button>
           </div>

@@ -1,8 +1,15 @@
 import React from "react";
 import { FaVideo } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../Context/AuthContext";
+
 const VideoCard = () => {
   const navigate = useNavigate();
+  const {setSearchedText} = useAuth();
+  const showVideos = () => {
+    setSearchedText(".mp4");
+    navigate("/dashboard/myfiles");
+  };
   return (
     <>
       <style>
@@ -63,7 +70,7 @@ const VideoCard = () => {
             <p className="text-gray-400 font-normal self-end text-sm dark:text-gray-400">
              
             </p>
-            <button onClick={()=>navigate("/dashboard/myfiles")} className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-300">
+            <button onClick={()=>showVideos()} className="text-black dark:text-white flex items-center mr-5 self-end hover:text-blue-500 dark:hover:text-blue-300">
               Open
             </button>
           </div>

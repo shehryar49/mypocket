@@ -26,6 +26,7 @@ const AuthProvider = ({ children }) => {
     const savedMode = localStorage.getItem("darkMode");
     return savedMode === "true";
   });
+  const [searchedText,setSearchedText] = useState("");
   useEffect(() => {
     localStorage.setItem("darkMode", isDarkMode);
     document.body.classList.toggle("dark", isDarkMode);
@@ -126,7 +127,9 @@ const AuthProvider = ({ children }) => {
         isDarkMode,
         setIsDarkMode,
         fileBrowserRoot,
-        setFileBrowserRoot
+        setFileBrowserRoot,
+        searchedText,
+        setSearchedText
       }}
     >
       {children}

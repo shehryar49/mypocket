@@ -39,7 +39,7 @@ var rid = 0;
 var rootID = 0;
 var tmp = 0;
 const MyFiles = () => {
-  const {fileBrowserRoot} = useAuth();
+  const {fileBrowserRoot,searchedText,setSearchedText} = useAuth();
   const [files,setFiles] = useState([]);
   const [currentPath,setCurrentPath] = useState("");
   const [open, setOpen] = React.useState(false);
@@ -62,7 +62,8 @@ const MyFiles = () => {
       const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: fileBrowserRoot.toString()}};
       axios.get(API_URL+"/files",config).then((response) => {
         console.log(response.data.data);
-        setFiles(response.data.data);
+        const filtered = response.data.data.filter((x) => {return x["name"].includes(searchedText)});
+        setFiles(filtered);
       });
     }
     else
@@ -73,12 +74,13 @@ const MyFiles = () => {
           const token = localStorage.getItem("token");
           const config = {headers: {Authorization: `Bearer ${token}`},params: {folderid: id.toString()}};
           axios.get(API_URL+"/files",config).then((response) => {
-            console.log(response.data.data);
-            setFiles(response.data.data);
+            const filtered = response.data.data.filter((x) => {return x["name"].includes(searchedText)});
+            setFiles(filtered);
           });
         
       });
     }
+
   },[]);
 
 
