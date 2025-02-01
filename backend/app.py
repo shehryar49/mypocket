@@ -14,7 +14,6 @@ import jwt
 import psycopg
 import random
 import subprocess
-import requests
 import smtplib, ssl
 
 
@@ -536,7 +535,6 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
 
 def clear_file(id):
     cur = conn.cursor()
-    print("clearing")
     cur.execute("delete from decrypting where id=%s",(id,))
 @app.get("/decrypted_resource")
 async def get_file(rid: str, token: str, bg: BackgroundTasks): 
