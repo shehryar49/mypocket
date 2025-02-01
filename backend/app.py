@@ -516,9 +516,9 @@ async def begin_decryption(rid: str,auth: HTTPAuthorizationCredentials = Depends
     cur.execute("select X,Y,n0,sum from encryption_keys where id=%s",(rid,))
     if name.endswith(".png"): # image
         key = cur.fetchall()[0]
-        command = f"./king 0 dimg '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python decryption-done.py {rid} '{name}'"
+        command = f"./king 0 dimg '{path}' 'decrypted/{name}' {key[0]} {key[1]} {key[2]} {key[3]} && python3 decryption-done.py {rid} '{name}'"
     else:
-        command = f"openssl enc -aes-256-cbc -d -salt -in '{path}' -out 'decrypted/{name}' -pass pass:mypocket && python decryption-done.py {rid} '{name}'"
+        command = f"openssl enc -aes-256-cbc -d -salt -in '{path}' -out 'decrypted/{name}' -pass pass:mypocket && python3 decryption-done.py {rid} '{name}'"
     cur.execute("update filesystem set last_modified=now() where id=%s",(rid,))
     os.system(command)
     return JSONResponse({'msg': 'Started'},200)
