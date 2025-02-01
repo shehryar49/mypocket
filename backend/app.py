@@ -415,7 +415,7 @@ async def delete_resource(id: str,auth: HTTPAuthorizationCredentials = Depends(s
                 return JSONResponse({'error': 'You do not have permissions to delete this!'},403)
         # user is authorized to whatever with this resource
     cur.execute("delete from filesystem where id=%s",(id,))
-    cur.execute("delete from shared_files where resourceid=%s",(id,))
+    cur.execute("delete from acl where resourceid=%s",(id,))
     cur.execute("delete from encryption_keys where id=%s",(id,))
 
     path = f"uploads/{id}-{name}"
