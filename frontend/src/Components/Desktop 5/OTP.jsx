@@ -62,7 +62,6 @@ const OTP = () => {
     );
   };
   const handleOtpComplete = (otp) => {
-    alert(otp);
     const payload = {email: tmp.email,password: tmp.password,otp: parseInt(otp)};
       const token = localStorage.getItem('token');
       const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},"body": JSON.stringify(payload),method: "POST"};
