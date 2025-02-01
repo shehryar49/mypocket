@@ -364,9 +364,9 @@ async def upload_file(parentrid: int, file: UploadFile, authorization: HTTPAutho
         read += 1024
     opened_file.close()
     if file.filename.endswith(".png"):
-        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png '{upload_path}' 3 3 550 0"
+        command = f"mv uploads/tmp-{id}.bin uploads/tmp-{id}.png && ./king {id} eimg uploads/tmp-{id}.png '{upload_path}' 3 3 550 0 && rm 'uploads/tmp-{id}.png'"
     else:
-        command = f"openssl enc -aes-256-cbc -salt -in 'uploads/tmp-{id}.bin' -out '{upload_path}' -pass pass:mypocket"
+        command = f"openssl enc -aes-256-cbc -salt -in 'uploads/tmp-{id}.bin' -out '{upload_path}' -pass pass:mypocket && rm uploads/tmp-{id}.bin"
     os.system(command)
     #fork_proc(command)
     return JSONResponse({"msg": "File uploaded successfully", "resource_id": id})
