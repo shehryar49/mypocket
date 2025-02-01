@@ -3,7 +3,7 @@ create table passwords(id SERIAL PRIMARY KEY,userid int NOT NULL,email VARCHAR(1
 
 --rtype is 0 for file and 1 for folder
 --parentid is -1 for root folder
-create table filesystem(id SERIAL PRIMARY KEY,userid int,rname VARCHAR(255),rtype int,parentid int,last_modified TIMESTAMP);
+create table filesystem(id SERIAL PRIMARY KEY,userid int,rname VARCHAR(255),rtype int,parentid int,last_modified TIMESTAMP DEFAULT NOW());
 
 create table acl(id SERIAL PRIMARY KEY,sharedBy int,ownername VARCHAR(50),sharedTo int,resourceid int,write_access boolean);
 

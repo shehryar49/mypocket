@@ -76,6 +76,7 @@ const AuthProvider = ({ children }) => {
         return response.json();
       }).then((json) => {
         toast.success("You can login to your new account now!");
+        navigate("/signin");
         return json;
       }).catch(() => {
         toast.error("An error occurred");

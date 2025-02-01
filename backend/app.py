@@ -534,8 +534,11 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
     done = records[0][0]
     return JSONResponse({'done': done})
 
+def clear_file(id):
+    cur = conn.cursor()
+    cur.execute("delete from decrypting where id=%s",(id,))
 @app.get("/decrypted_resource")
-async def get_file(rid: str, token: str): 
+async def get_file(rid: str, token: str, bg: BackgroundTasks): 
     user=None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -551,7 +554,7 @@ async def get_file(rid: str, token: str):
     name = records[0][1]
     if not done:
         return JSONResponse({'msg': 'try later'},404)
-    cur.execute("delete from decrypting where id=%s",(rid,))
+    bg.add_task(clear_file,rid)
     file_path = f"decrypted/{name}"
     return FileResponse(file_path)
 
