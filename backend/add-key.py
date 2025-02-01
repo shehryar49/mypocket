@@ -8,7 +8,7 @@ Y = sys.argv[3]
 n0 = sys.argv[4]
 sum = sys.argv[5]
 
-conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
+conn = psycopg.connect(dbname="mypocket", user="postgres", password="2002", host="localhost", port="5432")
 conn.autocommit = True
 cur = conn.cursor()
 

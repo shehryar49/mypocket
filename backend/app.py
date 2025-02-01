@@ -41,7 +41,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
 OTP_EXPIRY_TIME = 10  # 10 minutes
 # Database connection setup
-conn = psycopg.connect(dbname="mypocket", user="postgres", password="", host="localhost", port="5432")
+conn = psycopg.connect(dbname="mypocket", user="postgres", password="2002", host="localhost", port="5432")
 conn.autocommit = True
 
 # Models for User and Credentials
@@ -536,6 +536,7 @@ async def get_decryption_status(rid: str, auth: HTTPAuthorizationCredentials = D
 
 def clear_file(id):
     cur = conn.cursor()
+    print("clearing")
     cur.execute("delete from decrypting where id=%s",(id,))
 @app.get("/decrypted_resource")
 async def get_file(rid: str, token: str, bg: BackgroundTasks): 
@@ -554,7 +555,6 @@ async def get_file(rid: str, token: str, bg: BackgroundTasks):
     name = records[0][1]
     if not done:
         return JSONResponse({'msg': 'try later'},404)
-    bg.add_task(clear_file,rid)
     file_path = f"decrypted/{name}"
     return FileResponse(file_path)
 

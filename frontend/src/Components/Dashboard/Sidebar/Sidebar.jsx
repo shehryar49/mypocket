@@ -6,11 +6,11 @@ import Logout from "./Logout";
 import { FaBars } from "react-icons/fa6";
 import { IoClose } from "react-icons/io5";
 import { NavLink } from "react-router-dom";
-
+import {useNavigate} from "react-router";
 const Sidebar = () => {
   const { user ,imageUrl} = useContext(AuthContext);
   const [isVisible, setIsVisible] = useState(false);
-
+  const navigate = useNavigate();
   const handleVisibility = () => {
     setIsVisible(!isVisible);
   };
@@ -49,7 +49,7 @@ const Sidebar = () => {
           }}
         >
           <img src="/assets/logo.png" alt="logo" className="w-14 h-auto" />
-          <h1 className="text-2xl font-bold text-center">MY POCKET</h1>
+          <h1 onClick={() => navigate("/")} style={{cursor: "pointer"}} className="text-2xl font-bold text-center">MY POCKET</h1>
 
           {/* Bars and close icon */}
           <div

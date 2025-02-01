@@ -7,7 +7,7 @@ create table filesystem(id SERIAL PRIMARY KEY,userid int,rname VARCHAR(255),rtyp
 
 create table acl(id SERIAL PRIMARY KEY,sharedBy int,ownername VARCHAR(50),sharedTo int,resourceid int,write_access boolean);
 
-create table otp(userid INT NOT NULL,code int,created_at DATE);
+create table otp(userid INT NOT NULL,code int,created_at TIMESTAMP DEFAULT NOW());
 
 create table encrypting(id INT NOT NULL,name VARCHAR(255),done boolean);
 create table decrypting(id INT NOT NULL,name VARCHAR(255),done boolean);
