@@ -165,14 +165,11 @@ const MyFiles = () => {
     setFilesToShare([]);  
     const token = localStorage.getItem("token");
     const config = {headers: {Authorization: `Bearer ${token}`,"Content-Type": "application/json"},method: "POST",body: JSON.stringify(payload)};
-    fetch(API_URL+"/acl",config).then((response) => {
-      
-      return [response.json(),response.status];
-    }).then((result) => {
-      const json = result[0];
-      const status = result[1];
-      if(status != 200) 
-        throw new Error(json.msg);
+    fetch(API_URL+"/acl",config).then((response) => response.json())
+    .then((result) => {
+      console.log(result);
+      if('error' in result) 
+        throw new Error(result.error);
       toast.success("Folder/File shared!");
     }).catch((err) => {
       toast.error(err.message);
